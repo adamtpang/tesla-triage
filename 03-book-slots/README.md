@@ -8,7 +8,7 @@ python book.py
 
 This needs the stage 01 fault batch in `../01-urgency-rules/data/`, the slots CSV in `data/open_service_slots_2026-11-16.csv`, and the OpenRouter key in `../.env`. Both CSVs are simulation data and are gitignored. It only calls `:free` models.
 
-**Deliverables:** [`results/schedule.csv`](results/schedule.csv) (all 300 bookings) and [`results/safety_report.md`](results/safety_report.md).
+**Deliverables:** [`results/schedule.csv`](results/schedule.csv) (all 300 bookings) and [`results/safety_report.md`](results/safety_report.md) (recall, misses, the NONE-code and calm-tone breakdown, and the next batch for Hannah). Regenerate the report offline with `python safety_check.py`.
 
 ## The problem: same day for 105 safety messages doesn't fit
 
@@ -58,7 +58,7 @@ The rules are Pydantic models (`SlotRules`, `Slot`, `BookSlotArgs`) and fail on 
 ## Compared with Hannah Lindqvist's 60 hand-checked messages
 
 - **60 of 60** hand-checked safety faults are tagged safety urgent. None was missed.
-- 13 of them are in the Monday tier. The rest are in tier 2, all booked by Thursday morning.
+- 13 of them are in the Monday tier. The other 47 are in tier 2, and all 60 are booked by Wednesday 18 November. No hand-checked fault was missed, and the report breaks them down by code NONE (37 of 37 caught) and calm tone (19 of 19 caught).
 - **45 safety urgent messages were never hand-checked.** Hannah's set has no confirmed non-safety rows, so they can't be scored right or wrong. The report lists their IDs as the next set to send her.
 
 ## What I'd change next
