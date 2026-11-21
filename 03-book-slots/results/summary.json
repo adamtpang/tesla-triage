@@ -1,0 +1,60 @@
+{
+  "messages": 300,
+  "booked_by": {
+    "model": 288,
+    "fallback": 12
+  },
+  "models_used": {
+    "model (nvidia/nemotron-3.5-super-vl:free)": 288
+  },
+  "slot_types_used": {
+    "service_center_bay": 183,
+    "mobile_service_visit": 62,
+    "remote_ota_or_diagnostic": 38,
+    "support_callback": 17
+  },
+  "safety_urgent": 105,
+  "safety_booked_monday": 24,
+  "last_safety_booking": "2026-11-19 08:00",
+  "remote_fix_overflow_to_callback": 17,
+  "hand_checked": 60,
+  "hand_checked_tagged_safety": 60,
+  "hand_checked_in_monday_tier": 13,
+  "checks": {
+    "every message booked": true,
+    "no slot double-booked": true,
+    "every booking is a slot type its fix path allows": true,
+    "every safety message is in a service center bay": true,
+    "no safety message is booked after a later-ranked safety message": true
+  },
+  "bookings_by_day": {
+    "2026-11-16": {
+      "safety_urgent": 24,
+      "soon": 8,
+      "routine": 16
+    },
+    "2026-11-17": {
+      "safety_urgent": 34,
+      "soon": 12,
+      "routine": 16
+    },
+    "2026-11-18": {
+      "safety_urgent": 42,
+      "soon": 14,
+      "routine": 10
+    },
+    "2026-11-19": {
+      "safety_urgent": 5,
+      "soon": 14,
+      "routine": 45
+    },
+    "2026-11-20": {
+      "soon": 12,
+      "routine": 43
+    },
+    "2026-11-21": {
+      "soon": 2,
+      "routine": 3
+    }
+  }
+}
