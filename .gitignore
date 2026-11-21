@@ -1,0 +1,6 @@
+# Simulation data is not published. Put the batch CSV in each stage's data/ folder.
+**/data/
+# Generated outputs contain message text from the batch.
+**/output/
+__pycache__/
+*.pyc
