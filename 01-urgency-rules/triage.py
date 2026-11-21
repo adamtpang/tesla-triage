@@ -20,7 +20,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from rules import RULES, TAG_ORDER, FaultMessage, Tag, UrgencyRules
+from rules import RULES, TAG_ORDER, FaultMessage, FixPath, PathName, Tag, UrgencyRules
 
 # Signs the driver has already stopped driving, or is asking if it is safe to.
 # Orders messages inside a tag; never changes the tag.
@@ -42,6 +42,7 @@ SIGN_OFF = re.compile(r"(thanks|thank you|cheers|regards)\b[\w ,]{0,20}$", re.I)
 class Decision:
     msg: FaultMessage
     tag: Tag = Tag.ROUTINE
+    fix_path: FixPath | None = None
     evidence: list[str] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)
     off_the_road: bool = False
@@ -111,6 +112,14 @@ def tag_message(msg: FaultMessage, rules: UrgencyRules = RULES) -> Decision:
         d.flags.append("message is cut off, call back for the missing details")
 
     d.tag = min(candidates, key=TAG_ORDER.get)
+    d.fix_path = rules.paths_for(d.tag)[0]
+    if d.tag is Tag.ROUTINE:
+        software = rules.is_software(code, text)
+        if software:
+            d.fix_path = rules.path(PathName.REMOTE_FIX)
+            d.evidence.append(f"software issue, remote fix: {software}")
+        else:
+            d.fix_path = rules.path(PathName.SERVICE_CENTER)
     d.off_the_road = bool(OFF_THE_ROAD.search(text))
     d.soft_tone = bool(SOFT_TONE.search(text))
     return d
@@ -147,7 +156,7 @@ def evaluate(decisions: list[Decision]) -> dict:
 
 
 def write_queue(decisions: list[Decision], path: Path, rules: UrgencyRules) -> None:
-    cols = ["rank", "tag", "off_the_road", "message_id", "received_at", "channel",
+    cols = ["rank", "tag", "fix_path", "off_the_road", "message_id", "received_at", "channel",
             "customer_name", "vehicle_model", "model_year", "vin_last6", "service_center",
             "vehicle_alert_code", "message_subject", "evidence", "flags", "soft_tone",
             "respond_within_hours", "first_action", "driver_advice", "booking"]
@@ -155,9 +164,10 @@ def write_queue(decisions: list[Decision], path: Path, rules: UrgencyRules) -> N
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         for i, d in enumerate(decisions, 1):
-            fp = rules.fix_path(d.tag)
+            fp = d.fix_path
             m = d.msg.model_dump()
-            w.writerow({"rank": i, "tag": d.tag.value, "off_the_road": d.off_the_road,
+            w.writerow({"rank": i, "tag": d.tag.value, "fix_path": fp.name.value,
+                        "off_the_road": d.off_the_road,
                         **{k: m[k] for k in cols if k in m},
                         "evidence": " | ".join(d.evidence), "flags": " | ".join(d.flags),
                         "soft_tone": d.soft_tone, "respond_within_hours": fp.respond_within_hours,
@@ -187,7 +197,8 @@ def write_report(decisions, stats, conflicts, errors, path: Path, rules: Urgency
                 f"<td><small>{why}</small></td></tr>")
 
     fix_rows = "".join(
-        f"<tr class='{f.tag.value}'><td>{label[f.tag]}</td><td>{f.respond_within_hours} h</td>"
+        f"<tr class='{f.tag.value}'><td>{label[f.tag]}</td><td>{esc(f.name.value.replace('_', ' '))}</td>"
+        f"<td>{f.respond_within_hours} h</td>"
         f"<td>{esc(f.first_action)}</td><td>{esc(f.driver_advice)}</td><td>{esc(f.booking)}</td></tr>"
         for f in rules.fix_paths)
     code_rows = "".join(
@@ -231,7 +242,7 @@ tr.soon td:first-child, tr.soon td:nth-child(2) {{ background:var(--amber); }}
 <div class="stat"><b>{stats['caught']}/{stats['positives']}</b>hand-checked safety faults tagged safety urgent</div>
 </div>
 <h2>Fix paths</h2>
-<div class="wrap"><table><thead><tr><th>Tag</th><th>Respond within</th><th>First action</th><th>Driver advice</th><th>Booking</th></tr></thead><tbody>{fix_rows}</tbody></table></div>
+<div class="wrap"><table><thead><tr><th>Tag</th><th>Fix path</th><th>Respond within</th><th>First action</th><th>Driver advice</th><th>Booking</th></tr></thead><tbody>{fix_rows}</tbody></table></div>
 <h2>Dashboard alert codes</h2>
 <div class="wrap"><table><thead><tr><th>Code</th><th>System</th><th>Safety fault</th><th>Tag</th><th>Why</th></tr></thead><tbody>{code_rows}</tbody></table></div>
 <h2>Hidden safety rule</h2>
@@ -268,6 +279,8 @@ def main(argv: list[str]) -> int:
     counts = Counter(d.tag for d in decisions)
     print(f"{len(messages)} messages tagged, {len(errors)} rejected by validation: "
           + ", ".join(f"{t.value} {counts[t]}" for t in Tag))
+    paths = Counter(d.fix_path.name.value for d in decisions)
+    print("Fix paths: " + ", ".join(f"{n} {c}" for n, c in paths.items()))
     print(f"Hand-checked safety faults tagged safety_urgent: {stats['caught']}/{stats['positives']}")
     for d in stats["missed"]:
         print(f"  MISSED {d.msg.message_id}: {d.msg.message_subject}")

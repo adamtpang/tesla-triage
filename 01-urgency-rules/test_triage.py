@@ -7,7 +7,7 @@ import unittest
 
 from pydantic import ValidationError
 
-from rules import RULES, AlertCodeRule, FaultMessage, Tag, UrgencyRules
+from rules import RULES, AlertCodeRule, FaultMessage, PathName, Tag, UrgencyRules
 from triage import tag_message
 
 
@@ -112,6 +112,47 @@ class RuleValidation(unittest.TestCase):
     def test_bad_message_row_is_rejected(self):
         with self.assertRaises(ValidationError):
             msg("text", vin_last6="bad")
+
+
+class FixPaths(unittest.TestCase):
+    def path(self, text, **kw):
+        return tag_message(msg(text, **kw)).fix_path.name
+
+    def test_four_paths(self):
+        self.assertEqual({f.name for f in RULES.fix_paths}, set(PathName))
+
+    def test_safety_urgent_is_towed(self):
+        self.assertEqual(self.path("Brake warning on the dash.", code="BRK_w003"), PathName.TOW)
+
+    def test_soon_gets_mobile_service(self):
+        self.assertEqual(self.path("Charge port will not latch.", code="CP_a004"),
+                         PathName.MOBILE_SERVICE)
+
+    def test_routine_software_gets_remote_fix(self):
+        self.assertEqual(self.path("Screen rebooted twice.", code="UI_a004"), PathName.REMOTE_FIX)
+        self.assertEqual(self.path("My phone key won't unlock the car."), PathName.REMOTE_FIX)
+
+    def test_routine_physical_gets_service_center(self):
+        self.assertEqual(self.path("Cabin is slow to heat.", code="HVAC_w003"),
+                         PathName.SERVICE_CENTER)
+
+    def test_remote_fix_must_be_routine(self):
+        data = RULES.model_dump()
+        for f in data["fix_paths"]:
+            if f["name"] == PathName.REMOTE_FIX:
+                f["tag"] = Tag.SOON
+                f["respond_within_hours"] = 24
+        with self.assertRaises(ValidationError):
+            UrgencyRules.model_validate(data)
+
+
+class WiderBrakeRule(unittest.TestCase):
+    def test_vague_pedal_mention_is_safety(self):
+        self.assertEqual(tag("Something's not right when I press the pedal."), Tag.SAFETY_URGENT)
+
+    def test_pedal_said_normal_is_not(self):
+        self.assertEqual(tag("Tyre light is on. Pedal and steering feel completely normal."),
+                         Tag.ROUTINE)
 
 
 class Ordering(unittest.TestCase):

@@ -1,6 +1,6 @@
 # Fault Urgency Rules
 
-Urgency rules for a Tesla service center's Morning fault queue. Today, fault messages get answered in the order they arrive, so a brake warning can wait behind a question about wipers. These rules sort every message into one of three tags, give each tag a fix path, and decide which dashboard alerts count as safety faults.
+Urgency rules for a Tesla service center's Morning fault queue. Today, fault messages get answered in the order they arrive, so a brake warning can wait behind a question about wipers. These rules sort every message into one of three tags, route it to one of four fix paths, and decide which dashboard alerts count as safety faults.
 
 The rules are Pydantic models in [`rules.py`](rules.py) and are validated when they load. [`triage.py`](triage.py) applies them to the overnight batch of 300 messages from 15 to 16 November 2026.
 
@@ -12,13 +12,16 @@ python -m unittest
 
 The batch CSV is simulation data and is not in this repo. Put it in `data/` to run `triage.py`. The tests run without it.
 
-## The three tags and their fix paths
+## The three tags and four fix paths
 
-| Tag | Respond within | First action | Driver advice | Booking |
-| --- | --- | --- | --- | --- |
-| **Safety urgent** | 1 hour | Phone the driver before any other message is answered. | Do not drive until inspected. | Same day. Tow or mobile service if the car is parked. |
-| **Soon** | 24 hours | Reply today. Call back if the message is cut off. | Safe to drive. Use the workaround (key card, portable charger). | Mobile service or a slot within 3 days. |
-| **Routine** | 72 hours | Reply in normal order. | Safe to drive. | Next convenient visit, or a remote fix. |
+| Tag | Fix path | Respond within | What happens |
+| --- | --- | --- | --- |
+| **Safety urgent** | Tow to service center | 1 hour | Phone the driver before anything else. Tell them not to drive. Tow it in for a same-day inspection, so nobody drives a sinking pedal in. |
+| **Soon** | Mobile service | 24 hours | Reply today, or call back if the message is cut off. Safe to drive with a workaround (portable charger, key card) until a mobile technician comes, within 3 days. |
+| **Routine** | Service center visit | 72 hours | Physical issues that don't affect safety or daily use (heating, suspension clunks, door handles). Next convenient slot. |
+| **Routine** | Remote fix | 72 hours | Software issues (`UI_a004`, phone key, app, updates). Remote diagnostics, then a fix or over-the-air update. No visit unless it fails, then a service center visit. |
+
+Routine has two paths, so a software rule picks between them: alert `UI_a004`, or a phone key, app, screen or update problem, goes to remote fix. Everything else goes to a service center visit.
 
 ## Which dashboard alerts are safety faults
 
@@ -43,7 +46,8 @@ The test is simple: can a fault in this system stop the car from braking, steeri
 
 Of the 60 hand-checked safety faults, **37 had alert code `NONE`**. Sorting on alert codes alone would leave more than half of the real safety faults behind wiper questions. The hidden rule reads the driver's own words for:
 
-- a brake pedal that feels soft, sinks, goes long or drops to the floor
+- **any mention of the brake pedal or brakes, unless the driver says they feel normal**
+- a brake pedal that feels soft, sinks, goes long or drops to the floor (these name the symptom in the evidence)
 - grinding when stopping
 - the car pulling or drifting under braking
 - heavy, loose or jerking steering
@@ -66,9 +70,10 @@ Three refinements keep this rule honest:
 
 | Tag | Messages |
 | --- | --- |
-| Safety urgent | 105 |
-| Soon | 56 |
-| Routine | 139 |
+| Safety urgent (tow) | 105 |
+| Soon (mobile service) | 56 |
+| Routine (service center visit) | 101 |
+| Routine (remote fix) | 38 |
 
 - **60 of 60** hand-checked safety faults are tagged safety urgent.
 - 33 of the safety urgent drivers have already parked the car or are asking whether it's safe to drive.
@@ -83,10 +88,32 @@ Three refinements keep this rule honest:
 Every later part of the Morning fault queue reads these rules, so a mistake here would quietly send drivers to the wrong queue. Pydantic rejects the rules on load if:
 
 - a safety alert code is tagged anything other than safety urgent
-- a tag has no fix path, or response windows don't get longer from safety urgent to soon to routine
+- there aren't exactly four fix paths, a tag has no fix path, remote fix isn't under routine, or response windows don't get longer from safety urgent to soon to routine
 - an alert code appears twice, or a pattern is not a valid regex
 
 Each incoming message is also validated as a `FaultMessage` (ID format, channel, model, year, VIN suffix), so a bad row is reported instead of being tagged.
+
+## The prompt I gave Claude Code
+
+> Build the fault urgency rules for the Morning fault queue as Pydantic v2 models in a new Python repo.
+>
+> 1) Models: a `Tag` enum (safety_urgent, soon, routine), a `FixPath` model (tag, name, respond_within_hours, first_action, driver_advice), an `AlertCodeRule` model (code, system, safety_fault, tag, why), and a top-level `UrgencyRules` model holding all of them, plus the hidden safety rule.
+> 2) Four fix paths: safety_urgent -> tow to service center, call within 1 hour, tell the driver not to drive. soon -> mobile service within 3 days, driver uses a workaround meanwhile. routine -> service center visit at the next convenient slot. routine -> remote fix for software issues (UI_a004, phone key, app, updates).
+> 3) Alert codes: BRK_a001, BRK_w003, ABS_w002, ESP_w003, EPAS_w202, EPAS_a191 are safety faults -> safety_urgent. WIP_w001 and CP_a004 -> soon. UI_a004 and HVAC_w003 -> routine. Unknown codes -> soon and flagged, never silently routine.
+> 4) Hidden safety rule: with code NONE, any mention of the brake pedal or brakes is safety_urgent unless the driver says it's normal. Same for steering pulling and stability events. Tone never lowers the tag, and wiper sentences are skipped.
+> 5) Validators that fail loudly: a safety fault code tagged anything but safety_urgent, a tag with no fix path, response windows that don't get longer from safety_urgent to soon to routine, duplicate codes, invalid regex.
+> 6) A `FaultMessage` model that validates each CSV row, and a script that tags the overnight batch and reports how many of the 60 hand-checked safety faults land in safety_urgent.
+> 7) Tests for every rule above, including the polite soft-pedal message, the scary wiper message, and "brakes feel normal".
+>
+> Python + Pydantic only, no other dependencies. Don't commit the CSV.
+
+## One change I made to Claude Code's output, and why
+
+Claude Code's first version of the hidden safety rule only fired when the brake pedal came with a symptom word from a fixed list (soft, sinks, spongy, long, floor). It caught all 60 hand-checked faults, but reviewing it I saw the gap: a driver who writes "something's not right when I press the pedal" names no listed symptom, so the message would fall to routine and wait behind wiper questions.
+
+I widened it: with code `NONE`, **any** mention of the brake pedal or brakes is safety urgent unless the driver says it feels normal. That follows the rule this whole design rests on, recall over precision. An extra call costs an advisor a few minutes. A missed brake fault can cost a crash.
+
+It didn't change the count on this batch (still 105 safety urgent), because every pedal message here happened to use a listed word. It's a guard for the next batch, and a test (`test_vague_pedal_mention_is_safety`) keeps it from regressing.
 
 ## Judgment calls
 
@@ -100,7 +127,7 @@ Each incoming message is also validated as a `FaultMessage` (ID format, channel,
 ```
 rules.py           urgency rules and message schema, as Pydantic models
 triage.py          applies the rules and writes the queue and report
-test_triage.py     rule validation and the traps above (18 tests)
+test_triage.py     rule validation, fix paths and the traps above (26 tests)
 data/              the overnight batch (not published, gitignored)
 output/            generated: fault_queue.csv, report.html, urgency_rules.json (gitignored)
 ```

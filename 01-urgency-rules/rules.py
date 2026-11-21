@@ -29,8 +29,17 @@ class Tag(str, Enum):
 TAG_ORDER = {Tag.SAFETY_URGENT: 0, Tag.SOON: 1, Tag.ROUTINE: 2}
 
 
+class PathName(str, Enum):
+    TOW = "tow_to_service_center"
+    MOBILE_SERVICE = "mobile_service"
+    SERVICE_CENTER = "service_center_visit"
+    REMOTE_FIX = "remote_fix"
+
+
 class FixPath(BaseModel):
-    """How a tagged message gets handled."""
+    """How a tagged message gets handled. Routine has two paths, so the
+    software rule picks between service center visit and remote fix."""
+    name: PathName
     tag: Tag
     respond_within_hours: int = Field(gt=0)
     first_action: str
@@ -101,31 +110,57 @@ class HiddenSafetyRule(BaseModel):
         return v
 
 
+class RemoteFixRule(BaseModel):
+    """Routine messages about software go to remote fix instead of a visit."""
+    alert_codes: list[str]
+    symptoms: SymptomRule
+    fallback: PathName = Field(PathName.SERVICE_CENTER,
+                               description="Where a message goes if the remote fix fails.")
+
+
 class UrgencyRules(BaseModel):
     version: str
-    fix_paths: list[FixPath]
+    fix_paths: list[FixPath] = Field(min_length=4, max_length=4)
     alert_codes: list[AlertCodeRule]
     hidden_safety_rule: HiddenSafetyRule
     soon_symptoms: list[SymptomRule]
+    remote_fix_rule: RemoteFixRule
     cut_off_message_tag: Tag = Tag.SOON
     unknown_alert_code_tag: Tag = Tag.SOON
     default_tag: Tag = Tag.ROUTINE
 
     @model_validator(mode="after")
     def complete_and_ordered(self):
-        tags = [f.tag for f in self.fix_paths]
-        if sorted(tags, key=TAG_ORDER.get) != list(Tag) or len(tags) != len(set(tags)):
-            raise ValueError("need exactly one fix path per tag")
-        hours = [self.fix_path(t).respond_within_hours for t in Tag]
-        if hours != sorted(hours) or len(set(hours)) != len(hours):
-            raise ValueError("response windows must get strictly longer: safety < soon < routine")
+        names = [f.name for f in self.fix_paths]
+        if len(names) != len(set(names)):
+            raise ValueError("duplicate fix path")
+        for t in Tag:
+            if not self.paths_for(t):
+                raise ValueError(f"tag {t.value} has no fix path")
+        remote = self.path(PathName.REMOTE_FIX)
+        if remote is None or remote.tag is not Tag.ROUTINE:
+            raise ValueError("remote fix must exist and belong to routine")
+        for earlier, later in [(Tag.SAFETY_URGENT, Tag.SOON), (Tag.SOON, Tag.ROUTINE)]:
+            slowest = max(f.respond_within_hours for f in self.paths_for(earlier))
+            fastest = min(f.respond_within_hours for f in self.paths_for(later))
+            if slowest >= fastest:
+                raise ValueError("response windows must get strictly longer: safety < soon < routine")
         codes = [a.code for a in self.alert_codes]
         if len(codes) != len(set(codes)):
             raise ValueError("duplicate alert code")
         return self
 
-    def fix_path(self, tag: Tag) -> FixPath:
-        return next(f for f in self.fix_paths if f.tag is tag)
+    def paths_for(self, tag: Tag) -> list[FixPath]:
+        return [f for f in self.fix_paths if f.tag is tag]
+
+    def path(self, name: PathName) -> FixPath | None:
+        return next((f for f in self.fix_paths if f.name is name), None)
+
+    def is_software(self, code: str, text: str) -> str | None:
+        if code in self.remote_fix_rule.alert_codes:
+            return f"alert {code}"
+        hit = self.remote_fix_rule.symptoms.match(text)
+        return f'"{hit}"' if hit else None
 
     def alert(self, code: str) -> AlertCodeRule | None:
         return next((a for a in self.alert_codes if a.code == code), None)
@@ -153,18 +188,22 @@ class FaultMessage(BaseModel):
 RULES = UrgencyRules(
     version="2026-11-16",
     fix_paths=[
-        FixPath(tag=Tag.SAFETY_URGENT, respond_within_hours=1,
+        FixPath(name=PathName.TOW, tag=Tag.SAFETY_URGENT, respond_within_hours=1,
                 first_action="Phone the driver before any other message is answered.",
-                driver_advice="Do not drive the car until it is inspected.",
-                booking="Same-day inspection. Offer a tow or mobile service if the car is parked."),
-        FixPath(tag=Tag.SOON, respond_within_hours=24,
+                driver_advice="Do not drive the car. We are sending a tow.",
+                booking="Tow to the service center, inspected the same day."),
+        FixPath(name=PathName.MOBILE_SERVICE, tag=Tag.SOON, respond_within_hours=24,
                 first_action="Reply today. For a cut-off message, call back to get the missing details.",
-                driver_advice="Safe to drive. Use the workaround (key card, portable charger) meanwhile.",
-                booking="Mobile service or a service center slot within 3 days."),
-        FixPath(tag=Tag.ROUTINE, respond_within_hours=72,
+                driver_advice="Safe to drive. Use the workaround (portable charger, key card) until the technician arrives.",
+                booking="Mobile service technician within 3 days."),
+        FixPath(name=PathName.SERVICE_CENTER, tag=Tag.ROUTINE, respond_within_hours=72,
                 first_action="Reply in normal order.",
                 driver_advice="Safe to drive.",
-                booking="Next convenient visit, or fix remotely where possible."),
+                booking="Service center visit at the next convenient slot."),
+        FixPath(name=PathName.REMOTE_FIX, tag=Tag.ROUTINE, respond_within_hours=72,
+                first_action="Run remote diagnostics, then push a fix or over-the-air update.",
+                driver_advice="Safe to drive. No visit needed unless the remote fix fails.",
+                booking="None. If the remote fix fails, book a service center visit."),
     ],
     alert_codes=[
         AlertCodeRule(code="BRK_a001", system="brakes", safety_fault=True, tag=Tag.SAFETY_URGENT,
@@ -190,10 +229,11 @@ RULES = UrgencyRules(
     ],
     hidden_safety_rule=HiddenSafetyRule(
         name="Safety symptom with no dashboard alert",
-        why=("Most hand-checked safety faults arrive with alert code NONE. A soft brake "
-             "pedal, grinding when stopping, or the car pulling under braking is a safety "
-             "fault whatever the dashboard says, and whatever tone the driver uses. "
-             "'No rush, happy to wait' does not lower the tag."),
+        why=("37 of the 60 hand-checked safety faults arrive with alert code NONE. Any "
+             "mention of the brake pedal or brakes is safety urgent unless the driver says "
+             "they feel normal, and so is steering pulling or a stability event. Tone never "
+             "lowers the tag: 'no rush, happy to wait' next to a sinking pedal is still "
+             "safety urgent."),
         symptoms=[
             SymptomRule(name="brake pedal feel", system="brakes", patterns=[
                 r"\bpedal\b[^.]{0,60}\b(soft|softer|sinks?|sinking|spongy|long|floor|odd|off|"
@@ -219,6 +259,8 @@ RULES = UrgencyRules(
                 r"\b(stability|traction)\b[^.]{0,30}\b(warning|light|control)\b",
                 r"\bunsettled\b", r"\bslid\b", r"\bfelt loose\b", r"\bcut power\b"]),
             SymptomRule(name="ABS warning", system="anti-lock brakes", patterns=[r"\bABS\b"]),
+            SymptomRule(name="brake or pedal mentioned", system="brakes", patterns=[
+                r"\b(brake pedal|pedal|brakes?|braking|braked)\b"]),
         ],
         normal_phrases=[
             r"\b(brakes?|pedal|steering|steers?|tracks straight)\b[^.;]{0,40}?"
@@ -232,6 +274,13 @@ RULES = UrgencyRules(
         SymptomRule(name="view blocked in rain", system="wipers", patterns=[
             r"\bstreak\w*\b[^.]{0,40}\b(eyeline|view|across)\b"]),
     ],
+    remote_fix_rule=RemoteFixRule(
+        alert_codes=["UI_a004"],
+        symptoms=SymptomRule(name="software issue", system="software", patterns=[
+            r"\bphone key\b", r"\b(touchscreen|screen)\b[^.]{0,40}\b(reboot\w*|black|froze|freez\w*|blank)\b",
+            r"\b(the|my) app\b[^.]{0,40}\b(log in|offline|keeps|won't|will not)\b",
+            r"\bsince the (last )?(software )?update\b", r"\bpair\w*\b"]),
+    ),
 )
 
 

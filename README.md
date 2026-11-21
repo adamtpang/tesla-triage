@@ -4,7 +4,7 @@ A Tesla service center answers overnight fault messages in the order they arrive
 
 | Stage | What it does |
 | --- | --- |
-| [01 Urgency rules](01-urgency-rules/) | Tags every message safety urgent, soon or routine, decides which dashboard alerts are safety faults, and adds a hidden safety rule for faults with no alert. Validated Pydantic models. 60 of 60 hand-checked safety faults caught. |
+| [01 Urgency rules](01-urgency-rules/) | Tags every message safety urgent, soon or routine, routes it to one of four fix paths (tow, mobile service, service center, remote fix), decides which dashboard alerts are safety faults, and adds a hidden safety rule for faults with no alert. Validated Pydantic models. 60 of 60 hand-checked safety faults caught. |
 
 Built with Python, Pydantic and Claude Code.
 
