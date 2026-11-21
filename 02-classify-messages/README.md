@@ -46,3 +46,24 @@ A free OpenRouter model tags all 300 overnight fault messages with an urgency ta
 - `results/tags.csv`: every message ID with its final tag, fix path, source (model or rules backstop), the model's tag and the rules' tag. Public, with no message text or names.
 - `results/summary.json`: counts, and how many hand-checked safety faults the model caught by itself versus after the backstop.
 - `output/`: full answers with symptoms and reasons. Gitignored, because it quotes the messages.
+
+## Result on the overnight batch
+
+One run, all 300 messages through `nvidia/nemotron-3-ultra-550b-a55b:free`, at a cost of $0.
+
+| Tag | Fix path | Messages |
+| --- | --- | --- |
+| Safety urgent | Tow to service center | 105 |
+| Soon | Mobile service | 62 |
+| Routine | Service center visit | 78 |
+| Routine | Remote fix | 55 |
+
+- **The model caught all 60 hand-checked safety faults by itself.** The backstop raised 0 messages. It's still there for the run where a calm message slips past.
+- The calm and tricky cases were all tagged safety urgent with the tow path: MSG-10002 (polite soft pedal), MSG-10165 (grinding at the lights, no alert code), MSG-10229 (ABS code, driver guesses "a dirty wheel sensor"), MSG-10284 (stability warning, car "felt fine"), and MSG-10297 (ABS code, cut off mid-sentence, tagged with a call-back).
+- **The model and the rules agree on 294 of 300.** In all 6 disagreements the model was more cautious (soon where the rules said routine), never less.
+
+### What the disagreements taught me
+
+- **MSG-10051:** the model was right. "Skipping across the windscreen and leaving a streak" blocks the driver's view, but the stage 01 pattern for streaking missed that wording.
+- **MSG-10004, 10108, 10225:** wiper judgment calls (stuck up, chattering, grinding when parked). These are defensible either way.
+- **MSG-10182 and MSG-10204 show a prompt bug.** The model reasoned "alert code NONE not listed, so soon". My prompt says "Any code not listed: soon", and the model read NONE (no alert at all) as an unlisted code. The fix is one line: "NONE means no alert. It is not an unknown code." I left the prompt unchanged so these results match the code that produced them. This fix is the first change for the next run.

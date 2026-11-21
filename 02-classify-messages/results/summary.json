@@ -1,0 +1,23 @@
+{
+  "messages": 300,
+  "tags": {
+    "safety_urgent": 105,
+    "soon": 62,
+    "routine": 133
+  },
+  "fix_paths": {
+    "tow_to_service_center": 105,
+    "mobile_service": 62,
+    "service_center_visit": 78,
+    "remote_fix": 55
+  },
+  "hand_checked_safety_faults": 60,
+  "caught_by_model_alone": 60,
+  "caught_after_backstop": 60,
+  "model_and_rules_agree": 294,
+  "raised_by_backstop": 0,
+  "model_more_cautious_than_rules": 6,
+  "models_used": {
+    "nvidia/nemotron-3-ultra-550b-a55b:free": 300
+  }
+}
