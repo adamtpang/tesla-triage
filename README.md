@@ -6,6 +6,8 @@ Built in five stages for a 0.university work simulation, with Python, Pydantic, 
 
 ![The morning fault queue page](04-queue-page/screenshots/queue-top.png)
 
+**Live:** [tesla-triage.vercel.app](https://tesla-triage.vercel.app), a static snapshot of the queue, the results and the slides. The interactive page with the paste box runs locally (see Run it).
+
 ## Results on 300 overnight messages
 
 - **60 of 60** safety faults that a human checked by hand are tagged safety urgent, including 37 with no dashboard alert and 19 written in a calm "no rush" tone.
@@ -27,8 +29,10 @@ Built in five stages for a 0.university work simulation, with Python, Pydantic, 
 ```bash
 pip install -r requirements.txt
 python -m pytest            # 38 tests
-cd 04-queue-page && streamlit run app.py
+cd 04-queue-page && python -m streamlit run app.py
 ```
+
+The live site is built with `python scripts/build_site.py` into `site/` and deployed from that folder with `vercel deploy --prod`. It has no Git connection, so pushes never trigger a build.
 
 Stage 02 and 03 call a free OpenRouter model and need a key in `.env` (see `.env.example`). The scripts refuse any model that isn't free. The message batches are simulation data and are not in the repo: put each CSV in its stage's `data/` folder. Tests that need the data skip without it.
 
