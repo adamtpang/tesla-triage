@@ -243,7 +243,7 @@ frame({eyebrow:'Service schedule and safety check',
   ex:'Booking rules (left) and the safety check against the hand-checked set (right)',
   body:`<div class="two"><div class="flow">
     <div class="fl"><b>The fix path picks the slot type.</b> Tow and visit get a bay, mobile service gets a van, remote fix gets the remote desk.</div>
-    <div class="fl red"><b>Safety first.</b> A safety car takes the earliest open bay. The worst ${D.by_day[Object.keys(D.by_day)[0]].safety_urgent} get Monday, and no lower tag gets a bay while a safety car waits.</div>
+    <div class="fl red"><b>Safety first.</b> Safety cars take the earliest bays, in order: off the road, worst symptoms, oldest. The top ${D.by_day[Object.keys(D.by_day)[0]].safety_urgent} get Monday. No soon or routine message gets a bay while a safety car waits, so a wiper question can't hold up a brake fault.</div>
     <div class="fl"><b>The model books, the tool enforces.</b> The model calls <i>book_slot</i>, which rejects any slot that breaks a rule and says why. ${D.booked_model} booked by the model, ${D.booked_fallback} routine ones by code after 4 tries.</div>
     <div class="fl"><b>Overflow only when full.</b> ${D.callbacks} remote fixes moved to a phone callback. Safety tows never overflow.</div>
    </div><div><table class="cmp"><tr><th>Check</th><th>Result</th></tr>
