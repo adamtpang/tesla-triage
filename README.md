@@ -7,8 +7,9 @@ A Tesla service center answers overnight fault messages in the order they arrive
 | [01 Urgency rules](01-urgency-rules/) | Tags every message safety urgent, soon or routine, routes it to one of four fix paths (tow, mobile service, service center, remote fix), decides which dashboard alerts are safety faults, and adds a hidden safety rule for faults with no alert. Validated Pydantic models. 60 of 60 hand-checked safety faults caught. |
 | [02 Classify messages](02-classify-messages/) | A free OpenRouter model tags all 300 messages with an urgency tag and fix path from the stage 01 rules. Pydantic validates every answer, and the stage 01 rules run as a safety backstop. |
 | [03 Book slots](03-book-slots/) | Books all 300 messages into this week's open slots through a model-called booking tool that enforces the slot rules. Safety first in a tiered queue (24 Monday bays for 105 safety messages), plus a safety report compared with the 60 hand-checked messages. |
+| [04 Queue page](04-queue-page/) | A Streamlit page with all 300 messages, safety urgent on top, each with its tag, fix path and slot. A paste box tags and places any new message. 18 of 18 acceptance messages match the hand check, and the hidden brake message MSG-10309 lands as a safety tow ahead of every soon and routine message. |
 
-Built with Python, Pydantic, OpenRouter and Claude Code.
+Built with Python, Pydantic, OpenRouter, Streamlit and Claude Code.
 
 ## Setup
 
