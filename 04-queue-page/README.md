@@ -1,5 +1,7 @@
 # Morning fault queue page
 
+**The prompts I gave Claude Code are in [PROMPT.md](PROMPT.md).**
+
 A Streamlit page that brings the first three stages together. It shows all 300 overnight messages with safety urgent on top, each with its tag, fix path and service slot. A paste box takes any new message and returns its tag, fix path, service slot and place in the queue.
 
 ```bash
@@ -9,6 +11,11 @@ python -m pytest test_queue.py
 ```
 
 This needs the stage 01 fault batch, the stage 03 slots CSV, and the acceptance test CSV at `data/acceptance_test_messages.csv`. All three are simulation data and are gitignored. The page makes no model calls and needs no key.
+
+## Built for the morning
+
+- **Not-enough-bays warning.** At the top of the page: 47 of 105 safety urgent cars wait more than a day for a bay (Wednesday 18 November: 42, Thursday 19 November: 5). Monday has 24 bays for 105 safety cars. A pasted safety message that lands that far out gets the same warning.
+- **Safety call list.** Every safety urgent driver needs a call this morning. Advisors tick each one when it's done, the page counts who is still to call, and the ticks are saved to `output/called.json` so everyone sees the same list.
 
 ## Where each piece comes from
 
@@ -30,7 +37,7 @@ The page books slots with code, not the model, in the order below. That keeps it
 
 ## Screenshots
 
-The page running locally (`streamlit run app.py`), with the acceptance test at 18 of 18:
+The top of the page running locally (`streamlit run app.py`): the not-enough-bays warning and the safety call list.
 
 ![Top of the morning fault queue page](screenshots/queue-top.png)
 
@@ -50,7 +57,3 @@ It's a thank-you note about a Tahoe trip. There's no alert code, it says "no rus
 **The loud messages sit lower, because the tag comes from the fault, not the tone.** MSG-10301 (wipers, "I am going to lose my mind") is soon: a mobile van on Monday 16 November at 11:00, 107 of 301. The tiebreak moves it near the top of soon because the driver can't drive it in the rain. MSG-10305 (touchscreen, "honestly furious") is routine: a remote fix that overflows to a support callback on Thursday 19 November at 13:00, 301 of 301. The car drives normally, so nothing moves it up.
 
 All 18 acceptance messages get the same safety call as the hand check (18 of 18), including the angry wiper, door handle and touchscreen messages, which stay soon or routine.
-
-## The prompt I gave Claude Code
-
-> Build a Streamlit page in `04-queue-page/` for the morning fault queue. Reuse the earlier stages, don't rewrite them: tags for the 300 overnight messages come from `02-classify-messages/results/tags.csv`, a new message is tagged with `tag_message` from stage 01, and slots come from the stage 03 `Scheduler` and `SlotRules`, so the safety bay hold still applies. Order the queue safety urgent, then soon, then routine. Inside a tag, put cars off the road first, then severe wording, then oldest. Never use hand_checked or hand_checked_safety_fault for ordering, because they're the answer key. Add a paste box that takes a CSV row (header optional) or plain text and shows the tag, fix path, service slot, place in the queue and the evidence for the tag. Run the acceptance CSV on the page and show MSG-10309 on its own. Keep the logic in `queue_core.py` with no Streamlit in it, and add pytest tests: all 300 booked, safety on top, no lower tag gets a bay before the last safety bay, the tiebreak ignores the answer key, 18 of 18 on the acceptance set, and MSG-10309 lands as a safety tow ahead of every soon and routine message. No model calls, and no customer names in the table.

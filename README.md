@@ -19,13 +19,13 @@ Built in four stages for a 0.university work simulation, with Python, Pydantic, 
 | [01 Urgency rules](01-urgency-rules/) | Pydantic rules that tag each message safety urgent, soon or routine, route it to one of four fix paths, and catch safety symptoms that have no dashboard alert. |
 | [02 Classify messages](02-classify-messages/) | A free OpenRouter model tags all 300 messages from the stage 01 rules. Pydantic validates every answer, and the rules run as a backstop that can only raise a tag. |
 | [03 Book slots](03-book-slots/) | The model books each message through a `book_slot` tool that enforces the slot rules. Monday has 24 bays for 105 safety cars, so safety runs as a tiered queue. Includes a safety report against the hand-checked set. |
-| [04 Queue page](04-queue-page/) | A Streamlit page with the whole queue, safety urgent on top, plus a paste box that tags and places any new message. |
+| [04 Queue page](04-queue-page/) | A Streamlit page with the whole queue, safety urgent on top, a paste box that tags and places any new message, a warning when safety cars wait more than a day for a bay, and a call list for safety drivers. [Prompts](04-queue-page/PROMPT.md). |
 
 ## Run it
 
 ```bash
 pip install -r requirements.txt
-python -m pytest            # 36 tests
+python -m pytest            # 38 tests
 cd 04-queue-page && streamlit run app.py
 ```
 

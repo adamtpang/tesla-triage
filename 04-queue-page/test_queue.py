@@ -4,7 +4,8 @@ from datetime import datetime
 
 import pytest
 
-from queue_core import (ACCEPTANCE_CSV, FAULTS_CSV, SLOTS_CSV, Row, load, load_everything,
+from queue_core import (ACCEPTANCE_CSV, FAULTS_CSV, SLOTS_CSV, Row, days_out, late_safety, load,
+                        load_called, load_everything, save_called,
                         parse_pasted, place, row_from_rules)
 
 pytestmark = pytest.mark.skipif(not (FAULTS_CSV.exists() and SLOTS_CSV.exists()),
@@ -67,3 +68,20 @@ def test_paste_csv_row_and_plain_text():
     assert not errors and msgs[0].message_id == "MSG-10309"
     msgs, _ = parse_pasted("no rush, but the brake pedal feels soft", datetime(2026, 11, 16, 8))
     assert row_from_rules(msgs[0]).tag.value == "safety_urgent"
+
+
+def test_warns_about_safety_cars_waiting_more_than_a_day(world):
+    rows, _, base = world
+    late = late_safety(rows, base)
+    tags = {r.msg.message_id: r.tag.value for r in rows}
+    assert late and all(tags[m] == "safety_urgent" for m in late)
+    assert all(base[m].slot.slot_date.day > 17 for m in late)
+    on_time = [m for m, t in tags.items() if t == "safety_urgent" and m not in late]
+    assert all(days_out(base[m]) <= 1 for m in on_time)
+
+
+def test_called_list_round_trips(tmp_path):
+    path = tmp_path / "called.json"
+    assert load_called(path) == set()
+    save_called({"MSG-10002", "MSG-10001"}, path)
+    assert load_called(path) == {"MSG-10001", "MSG-10002"}

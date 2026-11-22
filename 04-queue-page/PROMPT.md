@@ -1,0 +1,9 @@
+# Prompts for the morning fault queue page
+
+## 1. The page
+
+> Build a Streamlit page in `04-queue-page/` for the morning fault queue. Reuse the earlier stages, don't rewrite them: tags for the 300 overnight messages come from `02-classify-messages/results/tags.csv`, a new message is tagged with `tag_message` from stage 01, and slots come from the stage 03 `Scheduler` and `SlotRules`, so the safety bay hold still applies. Order the queue safety urgent, then soon, then routine. Inside a tag, put cars off the road first, then severe wording, then oldest. Never use hand_checked or hand_checked_safety_fault for ordering, because they're the answer key. Add a paste box that takes a CSV row (header optional) or plain text and shows the tag, fix path, service slot, place in the queue and the evidence for the tag. Run the acceptance CSV on the page and show MSG-10309 on its own. Keep the logic in `queue_core.py` with no Streamlit in it, and add pytest tests: all 300 booked, safety on top, no lower tag gets a bay before the last safety bay, the tiebreak ignores the answer key, 18 of 18 on the acceptance set, and MSG-10309 lands as a safety tow ahead of every soon and routine message. No model calls, and no customer names in the table.
+
+## 2. Follow-up after review
+
+> Add two things to the queue page. First, a warning at the top when any safety urgent car's bay is more than one day after the queue morning (Monday 16 November), with the count by day, so the manager sees right away that there aren't enough bays. Show the same warning on a pasted safety message whose slot is that far out. Second, a safety call list: every safety urgent message with a "called" checkbox, a count of who is still to call, and a toggle to hide the ones already called. Save the ticks to `output/called.json` (gitignored) so the whole team sees the same list. Put the logic in `queue_core.py` with tests.

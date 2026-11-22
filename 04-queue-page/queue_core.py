@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -34,6 +35,10 @@ FAULTS_CSV = ROOT / "01-urgency-rules/data/overnight_fault_messages_2026-11-16.c
 TAGS_CSV = ROOT / "02-classify-messages/results/tags.csv"
 SLOTS_CSV = ROOT / "03-book-slots/data/open_service_slots_2026-11-16.csv"
 ACCEPTANCE_CSV = HERE / "data/acceptance_test_messages.csv"
+CALLED_JSON = HERE / "output/called.json"  # who has been phoned, gitignored
+
+QUEUE_DAY = SLOT_RULES.same_day  # the morning the queue is worked: Monday 16 November
+MAX_SAFETY_WAIT_DAYS = 1
 
 FIELDS = list(FaultMessage.model_fields)
 
@@ -163,3 +168,33 @@ def load_everything():
     rows = base_rows()
     slots = load_slots(SLOTS_CSV)
     return rows, slots, schedule(rows, slots)
+
+
+def days_out(booking: Booking) -> int | None:
+    """Days from the queue morning to the booked slot. 0 means same day."""
+    return None if booking.slot is None else (booking.slot.slot_date - QUEUE_DAY).days
+
+
+def late_safety(rows: list[Row], bookings: dict[str, Booking],
+                max_days: int = MAX_SAFETY_WAIT_DAYS) -> list[str]:
+    """Safety urgent messages whose bay is more than max_days out, or that have no bay."""
+    late = []
+    for r in rows:
+        if r.tag is not Tag.SAFETY_URGENT:
+            continue
+        d = days_out(bookings[r.msg.message_id])
+        if d is None or d > max_days:
+            late.append(r.msg.message_id)
+    return late
+
+
+def load_called(path: Path = CALLED_JSON) -> set[str]:
+    try:
+        return set(json.loads(path.read_text(encoding="utf-8")))
+    except (FileNotFoundError, ValueError):
+        return set()
+
+
+def save_called(ids: set[str], path: Path = CALLED_JSON) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(ids), indent=1), encoding="utf-8")
