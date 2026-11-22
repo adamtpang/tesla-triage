@@ -3,7 +3,7 @@
 A Streamlit page that brings the first three stages together. It shows all 300 overnight messages with safety urgent on top, each with its tag, fix path and service slot. A paste box takes any new message and returns its tag, fix path, service slot and place in the queue.
 
 ```bash
-pip install streamlit pandas pydantic
+pip install -r ../requirements.txt
 streamlit run app.py
 python -m pytest test_queue.py
 ```
@@ -34,7 +34,7 @@ The page running locally (`streamlit run app.py`), with the acceptance test at 1
 
 ![Top of the morning fault queue page](screenshots/queue-top.png)
 
-MSG-10309, Lauren Nakamura's Tahoe trip note, placed by the page:
+MSG-10309, the Tahoe trip note, placed by the page:
 
 ![MSG-10309 tagged safety urgent, tow to service center, Thursday 19 November 09:00, 106 of 301](screenshots/msg-10309.png)
 

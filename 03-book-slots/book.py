@@ -381,7 +381,6 @@ def write_outputs(items: list[Item], sched: Scheduler, messages) -> None:
     for r in rows:
         by_day[r["slot_date"]][r["tag"]] += 1
     hand = [r for r in rows if r["hand_checked_safety_fault"]]
-    tier1 = [r for r in safety if r["tier"] == "safety_tier_1_same_day"]
     summary = {
         "messages": len(rows),
         "booked_by": dict(Counter(r["booked_by"].split(" (")[0] for r in rows)),

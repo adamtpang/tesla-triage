@@ -5,7 +5,7 @@ A free OpenRouter model tags all 300 overnight fault messages with an urgency ta
 ## Setup: OpenRouter key
 
 1. Get a free key at [openrouter.ai/keys](https://openrouter.ai/keys).
-2. Copy the template at the repo root and paste the key after the `=`:
+2. From the repo root, copy the template and paste the key after the `=`:
 
    ```bash
    cp .env.example .env
@@ -18,7 +18,7 @@ A free OpenRouter model tags all 300 overnight fault messages with an urgency ta
 3. Run it:
 
    ```bash
-   pip install -r ../01-urgency-rules/requirements.txt
+   pip install -r ../requirements.txt
    python classify.py ../01-urgency-rules/data/overnight_fault_messages_2026-11-16.csv
    ```
 

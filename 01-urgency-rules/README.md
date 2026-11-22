@@ -5,7 +5,7 @@ Urgency rules for a Tesla service center's Morning fault queue. Today, fault mes
 The rules are Pydantic models in [`rules.py`](rules.py) and are validated when they load. [`triage.py`](triage.py) applies them to the overnight batch of 300 messages from 15 to 16 November 2026.
 
 ```bash
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python triage.py data/overnight_fault_messages_2026-11-16.csv
 python -m unittest
 ```
@@ -117,7 +117,7 @@ It didn't change the count on this batch (still 105 safety urgent), because ever
 
 ## Judgment calls
 
-- **Recall over precision.** Every stability warning is safety urgent, even when the driver says the car "felt fine". An extra phone call costs minutes. A missed brake fault costs far more.
+- **Recall over precision.** Every stability warning is safety urgent, even when the driver says the car "felt fine".
 - **Range drops in cold weather are Routine.** That's normal battery behavior, not a fault.
 - **A touchscreen that reboots while driving is Routine.** The driving controls still work. This one is arguable.
 - **Rules, not a trained model.** 60 labels that are all safety faults are too few to train on honestly, and a safety call has to be explainable. Every tag quotes the phrase that caused it.
