@@ -28,6 +28,16 @@ The page books slots with code, not the model, in the order below. That keeps it
 
 **What I left out on purpose: hand-checked status.** Stage 03 used it as a tiebreak. But it's the answer key, and a new message pasted in the morning never has one. So the page can't depend on it. Because of this change, 284 of the 300 page slots fall on the same day as the stage 03 model schedule. The 16 that differ are safety messages swapping places inside the safety queue.
 
+## Screenshots
+
+The page running locally (`streamlit run app.py`), with the acceptance test at 18 of 18:
+
+![Top of the morning fault queue page](screenshots/queue-top.png)
+
+MSG-10309, Lauren Nakamura's Tahoe trip note, placed by the page:
+
+![MSG-10309 tagged safety urgent, tow to service center, Thursday 19 November 09:00, 106 of 301](screenshots/msg-10309.png)
+
 ## The hidden brake message, MSG-10309
 
 It's a thank-you note about a Tahoe trip. There's no alert code, it says "no rush at all", and inside it says the pedal "goes further down than it used to" with "a faint grinding" at a full stop.
@@ -36,6 +46,8 @@ It's a thank-you note about a Tahoe trip. There's no alert code, it says "no rus
 - **Fix path:** tow to service center.
 - **Place:** 106 of 301. That's ahead of all 195 soon and routine messages, behind the 105 overnight safety messages. It's newer than all of them, the car is still driving, and the wording isn't in the severe list.
 - **Slot:** a service center bay, Thursday 19 November 09:00. Booking it moves 19 routine bay bookings later. No safety or soon booking moves.
+
+**The loud messages sit lower, because the tag comes from the fault, not the tone.** MSG-10301 (wipers, "I am going to lose my mind") is soon: a mobile van on Monday 16 November at 11:00, 107 of 301. The tiebreak moves it near the top of soon because the driver can't drive it in the rain. MSG-10305 (touchscreen, "honestly furious") is routine: a remote fix that overflows to a support callback on Thursday 19 November at 13:00, 301 of 301. The car drives normally, so nothing moves it up.
 
 All 18 acceptance messages get the same safety call as the hand check (18 of 18), including the angry wiper, door handle and touchscreen messages, which stay soon or routine.
 
