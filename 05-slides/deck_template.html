@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morning Fault Queue</title>
+<style>
+  :root{
+    --ink:#17212b;--muted:#5f6b78;--faint:#97a2ae;--line:#dfe4e9;--band:#f3f5f7;
+    --safety:#d0302f;--soon:#e0912b;--routine:#3f8f63;--slate:#33506a;--pale:#c9d2da;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{font-family:var(--sans);background:#0e1013;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+  .shell{container-type:inline-size;width:min(96vw, calc(88vh * 1.7778));}
+  .slide{position:relative;background:#fff;color:var(--ink);border-radius:10px;aspect-ratio:16/9;width:100%;overflow:hidden;font-size:1.6cqw;}
+  .pad{position:absolute;inset:0;padding:2.1em 2.7em 1.9em;display:flex;flex-direction:column;}
+  .eyebrow{font-size:.72em;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--safety);margin-bottom:.45em;}
+  .headline{font-size:1.55em;font-weight:800;line-height:1.18;letter-spacing:-.01em;max-width:95%;}
+  .rule{height:2px;background:var(--ink);margin:.8em 0 .6em;}
+  .exlabel{font-size:.7em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:.4em;}
+  .canvas{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;}
+  .canvas svg{width:100%;height:100%;}
+  .takeaway{margin-top:.6em;background:var(--band);border-left:3px solid var(--safety);padding:.65em .9em;font-size:.84em;line-height:1.45;color:#25313c;}
+  .takeaway b{color:var(--safety);}
+  .ftr{display:flex;gap:1em;margin-top:.6em;font-size:.62em;color:var(--faint);}
+  .ftr .pg{margin-left:auto;font-weight:700;}
+  .cover{justify-content:space-between;}
+  .cv-top{font-size:.76em;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--safety);}
+  .cv-title{font-size:2.8em;font-weight:800;line-height:1.06;letter-spacing:-.02em;}
+  .cv-sub{font-size:1.02em;color:var(--muted);margin-top:.7em;max-width:78%;line-height:1.5;}
+  .strip{display:flex;border-top:2px solid var(--ink);padding-top:.9em;}
+  .strip>div{flex:1;padding-right:1em;}
+  .n{font-size:1.65em;font-weight:800;letter-spacing:-.01em;}
+  .l{font-size:.7em;color:var(--muted);margin-top:.15em;text-transform:uppercase;letter-spacing:.06em;line-height:1.35;}
+  .red{color:var(--safety);} .grn{color:var(--routine);}
+  .cols{display:flex;gap:1.6em;flex:1;min-height:0;}
+  .points{flex:1.6;display:flex;flex-direction:column;justify-content:center;gap:.8em;}
+  .pt{display:flex;gap:.8em;align-items:flex-start;font-size:.9em;line-height:1.48;color:#25313c;}
+  .pt i{flex:none;font-style:normal;width:1.7em;height:1.7em;border-radius:50%;background:var(--ink);color:#fff;font-weight:800;font-size:.85em;display:grid;place-items:center;}
+  .pt b{color:var(--ink);}
+  .rail{flex:1;background:var(--band);border-radius:8px;padding:1em 1.1em;display:flex;flex-direction:column;justify-content:center;gap:.8em;}
+  .rail hr{border:0;height:1px;background:var(--line);margin:0;}
+  .ask{font-size:.88em;margin-top:.3em;} .ask b{color:var(--safety);}
+  .pipe{display:flex;gap:.7em;width:100%;align-items:stretch;}
+  .step{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:.9em .9em .8em;display:flex;flex-direction:column;gap:.35em;position:relative;}
+  .step .k{font-size:.66em;font-weight:800;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;}
+  .step .t{font-size:1.02em;font-weight:800;}
+  .step .d{font-size:.74em;color:var(--muted);line-height:1.45;flex:1;}
+  .step .tool{font-size:.68em;font-weight:700;color:var(--slate);background:var(--band);border-radius:5px;padding:.3em .5em;align-self:flex-start;}
+  .step .big{font-size:1.25em;font-weight:800;color:var(--safety);}
+  .arrow{align-self:center;color:var(--faint);font-size:1.3em;}
+  .shot{max-width:100%;max-height:100%;border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px -18px rgba(0,0,0,.45);}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;width:100%;}
+  .kpi{background:var(--band);border-radius:8px;padding:.9em 1em;}
+  .kpi .n{font-size:1.9em;}
+  table.cmp{width:100%;border-collapse:collapse;font-size:.78em;}
+  table.cmp th{text-align:left;color:var(--muted);font-weight:700;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;padding:.45em .5em;border-bottom:2px solid var(--ink);}
+  table.cmp td{padding:.55em .5em;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.35;}
+  table.cmp tr.hi td{background:#fdeeee;}
+  .pill{display:inline-block;font-size:.85em;font-weight:800;padding:.1em .5em;border-radius:99px;color:#fff;}
+  .p-safety_urgent{background:var(--safety);} .p-soon{background:var(--soon);} .p-routine{background:var(--routine);}
+  .next{display:grid;grid-template-columns:1fr 1fr;gap:1.6em 1.6em;width:100%;}
+  .nx{display:flex;gap:.7em;align-items:flex-start;font-size:.86em;line-height:1.45;color:#25313c;}
+  .nx i{flex:none;font-style:normal;font-weight:800;color:var(--safety);font-size:1.3em;line-height:1;}
+  .nx b{color:var(--ink);}
+  .nav{display:flex;align-items:center;justify-content:center;gap:1em;margin-top:14px;}
+  .nav button{width:40px;height:40px;border-radius:50%;border:1px solid #3a3f47;background:#16181c;color:#fff;font-size:18px;cursor:pointer;}
+  .nav button:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:7px;} .dots i{width:8px;height:8px;border-radius:50%;background:#3c4148;cursor:pointer;} .dots i.on{background:var(--safety);}
+  body.print{background:#fff;padding:0;display:block;}
+  body.print .shell{width:1600px;} body.print .slide{width:1600px;height:900px;border-radius:0;font-size:25.6px;page-break-after:always;break-after:page;}
+  body.print .nav{display:none;}
+  @page{size:1600px 900px;margin:0;}
+</style>
+</head>
+<body>
+<div class="shell" id="shell"><div class="slide" id="slide"></div>
+<div class="nav"><button id="prev">&lsaquo;</button><div class="dots" id="dots"></div><button id="next">&rsaquo;</button></div></div>
+<script>
+const D=/*DATA*/null;
+const COL={safety_urgent:'#d0302f',soon:'#e0912b',routine:'#3f8f63'};
+const LABEL={safety_urgent:'safety urgent',soon:'soon',routine:'routine'};
+const SRC=`Source: ${D.n} overnight fault messages, 15 to 16 November 2026 (simulation data); ${D.hand} hand-checked safety faults; repo results for stages 01 to 04.`;
+
+function frame(o){return `<div class="pad">
+  <div class="eyebrow">${o.eyebrow}</div><div class="headline">${o.headline}</div><div class="rule"></div>
+  ${o.ex?`<div class="exlabel">${o.ex}</div>`:''}<div class="canvas">${o.body}</div>
+  ${o.so?`<div class="takeaway"><b>So what:</b> ${o.so}</div>`:''}
+  <div class="ftr"><span>${o.src||SRC}</span><span class="pg">${o.pg}</span></div></div>`;}
+
+/* Two strips of 300 ticks: arrival order vs queue page */
+function chartStrips(){
+  const x0=190,x1=960,w=(x1-x0)/D.n; let g='';
+  [['Arrival order',D.fifo_tags,60],['Queue page',D.page_tags,190]].forEach(([lab,tags,y])=>{
+    g+=`<text x="${x0-18}" y="${y+40}" text-anchor="end" font-size="20" font-weight="800" fill="#17212b">${lab}</text>`;
+    tags.forEach((t,i)=>{ g+=`<rect x="${x0+i*w}" y="${y}" width="${Math.max(w-0.6,1)}" height="62" fill="${t==='safety_urgent'?COL.safety_urgent:'#d5dce3'}"/>`; });
+  });
+  [1,100,200,300].forEach(v=>{ const x=x0+(v-1)*w+w/2; g+=`<text x="${x}" y="296" text-anchor="middle" font-size="15" fill="#97a2ae">#${v}</text>`; });
+  const mx=x0+(D.fifo_median-1)*w+w/2;
+  g+=`<line x1="${mx}" y1="40" x2="${mx}" y2="128" stroke="#17212b" stroke-width="2" stroke-dasharray="4 3"/>`;
+  g+=`<text x="${mx+8}" y="36" font-size="16" font-weight="800" fill="#17212b">typical safety message: #${D.fifo_median}</text>`;
+  const ex=x0+(D.page_last_safety_rank)*w;
+  g+=`<line x1="${ex}" y1="180" x2="${ex}" y2="262" stroke="#17212b" stroke-width="2" stroke-dasharray="4 3"/>`;
+  g+=`<text x="${ex+8}" y="276" font-size="16" font-weight="800" fill="#17212b">all ${D.n_safety} safety messages in #1 to #${D.page_last_safety_rank}</text>`;
+  g+=`<rect x="${x0}" y="316" width="16" height="16" fill="${COL.safety_urgent}"/><text x="${x0+24}" y="329" font-size="15" fill="#33506a">safety urgent</text>`;
+  g+=`<rect x="${x0+160}" y="316" width="16" height="16" fill="#d5dce3"/><text x="${x0+184}" y="329" font-size="15" fill="#33506a">soon and routine</text>`;
+  return `<svg viewBox="0 0 1000 345">${g}</svg>`;
+}
+
+/* Horizontal bars: how many of the 60 each approach catches */
+function chartCatch(){
+  const rows=[['Dashboard alert codes only',D.alert_only,'#c9d2da'],['Model by itself (stage 02)',D.model_caught,'#33506a'],['Model plus rules (final tags)',D.rules_caught,COL.safety_urgent]];
+  const x0=330,x1=790,top=40,h=62,gap=36; let g='';
+  rows.forEach(([lab,v,c],i)=>{ const y=top+i*(h+gap), w=(v/D.hand)*(x1-x0);
+    g+=`<text x="${x0-16}" y="${y+38}" text-anchor="end" font-size="19" font-weight="700" fill="#17212b">${lab}</text>`;
+    g+=`<rect x="${x0}" y="${y}" width="${x1-x0}" height="${h}" fill="#f3f5f7"/><rect x="${x0}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`;
+    g+=`<text x="${x0+w+12}" y="${y+40}" font-size="24" font-weight="800" fill="#17212b">${v} of ${D.hand}</text>`; });
+  return `<svg viewBox="0 0 1000 320">${g}</svg>`;
+}
+
+/* Stacked bars: bookings by day */
+function chartDays(){
+  const days=Object.keys(D.by_day), x0=110,x1=900,y0=30,y1=290,vmax=70,bw=86;
+  const cx=days.map((_,i)=>x0+(i+.5)*((x1-x0)/days.length)); let g='';
+  [20,40,60].forEach(v=>{const y=y1-(v/vmax)*(y1-y0); g+=`<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="#e6eaee"/><text x="${x0-10}" y="${y+5}" text-anchor="end" font-size="15" fill="#97a2ae">${v}</text>`;});
+  g+=`<line x1="${x0}" y1="${y1}" x2="${x1}" y2="${y1}" stroke="#17212b" stroke-width="2"/>`;
+  days.forEach((d,i)=>{ let acc=0; const dt=new Date(d+'T12:00:00');
+    ['safety_urgent','soon','routine'].forEach(t=>{ const v=D.by_day[d][t]||0; if(!v) return; const h=(v/vmax)*(y1-y0); const yb=y1-(acc/vmax)*(y1-y0); acc+=v;
+      g+=`<rect x="${cx[i]-bw/2}" y="${yb-h}" width="${bw}" height="${h}" fill="${COL[t]}"/>`;
+      if(t==='safety_urgent') g+=`<text x="${cx[i]}" y="${yb-h/2+7}" text-anchor="middle" font-size="19" font-weight="800" fill="#fff">${v}</text>`; });
+    g+=`<text x="${cx[i]}" y="${y1+26}" text-anchor="middle" font-size="16" fill="#5f6b78">${dt.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</text>`; });
+  let lx=x0; ['safety_urgent','soon','routine'].forEach(t=>{ g+=`<rect x="${lx}" y="${y1+44}" width="15" height="15" fill="${COL[t]}"/><text x="${lx+22}" y="${y1+57}" font-size="15" fill="#33506a">${LABEL[t]}</text>`; lx+=150; });
+  return `<svg viewBox="0 0 1000 350">${g}</svg>`;
+}
+
+const pill=t=>`<span class="pill p-${t}">${LABEL[t]}</span>`;
+const c=D.c10309,w=D.c10301,s=D.c10305;
+const slides=[
+`<div class="pad cover">
+  <div class="cv-top">Service operations &middot; Morning fault queue</div>
+  <div><div class="cv-title">Brake warnings first</div>
+  <div class="cv-sub">How the overnight fault messages went from first come, first served to a queue that puts unsafe cars at the top, books every car, and catches the brake fault hidden in a thank-you note.</div></div>
+  <div class="strip">
+    <div><div class="n">${D.n}</div><div class="l">Overnight messages</div></div>
+    <div><div class="n red">${D.n_safety}</div><div class="l">Safety urgent</div></div>
+    <div><div class="n grn">${D.rules_caught} of ${D.hand}</div><div class="l">Hand-checked safety faults caught</div></div>
+    <div><div class="n grn">#1 to #${D.page_last_safety_rank}</div><div class="l">Where safety messages now sit</div></div>
+  </div></div>`,
+
+`<div class="pad"><div class="eyebrow">Summary</div>
+  <div class="headline">Every safety message now sits at the top of the morning queue, and every car has a slot this week.</div><div class="rule"></div>
+  <div class="cols"><div class="points">
+    <div class="pt"><i>1</i><div><b>The problem:</b> messages were answered in arrival order. The typical safety message sat #${D.fifo_median} of ${D.n}, behind ${D.others_ahead_avg} other messages on average, and ${D.behind_wiper} of ${D.n_safety} had a wiper message ahead of them.</div></div>
+    <div class="pt"><i>2</i><div><b>The hard part:</b> ${D.none_code} of the ${D.hand} confirmed safety faults had no dashboard alert at all. Sorting on alert codes would catch only ${D.alert_only}.</div></div>
+    <div class="pt"><i>3</i><div><b>What we built:</b> urgency rules, a free AI model that tags every message, a booking tool that enforces the slot rules, and one page that shows it all with safety first.</div></div>
+    <div class="ask"><b>The ask:</b> more bay capacity early in the week. ${D.late} of ${D.n_safety} safety cars still wait more than a day for a bay.</div>
+  </div><div class="rail">
+    <div><div class="n red">Top ${D.n_safety}</div><div class="l">Where safety messages now sit, up from a typical #${D.fifo_median}</div></div><hr>
+    <div><div class="n">${D.rules_caught} of ${D.hand}</div><div class="l">Hand-checked safety faults caught</div></div><hr>
+    <div><div class="n">${D.acc_match} of ${D.acc_n}</div><div class="l">Acceptance test messages right</div></div><hr>
+    <div><div class="n grn">${D.booked} of ${D.n}</div><div class="l">Booked this week</div></div>
+  </div></div>
+  <div class="ftr"><span>${SRC}</span><span class="pg">01</span></div></div>`,
+
+frame({eyebrow:'The problem',pg:'02',
+  headline:`In arrival order, the typical safety message sat #${D.fifo_median} of ${D.n}, behind ${D.others_ahead_avg} other messages.`,
+  ex:`Exhibit 1 | Position of each of the ${D.n} messages, arrival order vs the queue page`,
+  body:chartStrips(),
+  so:`${D.behind_wiper} of ${D.n_safety} safety messages had at least one wiper message ahead of them, and the last one sat at #${D.fifo_worst}. On the page, all ${D.n_safety} come before any soon or routine message.`}),
+
+frame({eyebrow:'Why it is hard',pg:'03',
+  headline:`${D.none_code} of ${D.hand} confirmed safety faults had no dashboard alert, so alert codes alone catch only ${D.alert_only}.`,
+  ex:`Exhibit 2 | Hand-checked safety faults tagged safety urgent, by approach`,
+  body:chartCatch(),
+  so:`Drivers describe brake problems in their own words, often politely ("no rush", "happy to wait"). The rules read the words: any brake, pedal or steering symptom is safety urgent, and tone never lowers the tag.`}),
+
+frame({eyebrow:'Tools and approach',pg:'04',
+  headline:'Four stages, each built on the one before, so there is one set of rules to trust.',
+  ex:'Exhibit 3 | What each stage does and the tool behind it',
+  body:`<div class="pipe">
+   <div class="step"><span class="k">Stage 01</span><span class="t">Urgency rules</span><span class="d">Three tags, four fix paths, which alerts are safety faults, and a hidden rule for symptoms with no alert.</span><span class="big">${D.rules_caught} of ${D.hand}</span><span class="tool">Python + Pydantic</span></div><span class="arrow">&rsaquo;</span>
+   <div class="step"><span class="k">Stage 02</span><span class="t">Classify</span><span class="d">A free AI model tags all ${D.n} messages. Every answer is validated, and the rules can only raise a tag.</span><span class="big">$0</span><span class="tool">OpenRouter free model</span></div><span class="arrow">&rsaquo;</span>
+   <div class="step"><span class="k">Stage 03</span><span class="t">Book slots</span><span class="d">The model books through a tool that rejects any slot that breaks a rule. No bay goes to a lower tag while a safety car waits.</span><span class="big">${D.checks_passed} of ${D.checks} checks</span><span class="tool">Tool calling</span></div><span class="arrow">&rsaquo;</span>
+   <div class="step"><span class="k">Stage 04</span><span class="t">Queue page</span><span class="d">The whole queue, safety first, a paste box for new messages, a call list and a not-enough-bays warning.</span><span class="big">${D.booked} booked</span><span class="tool">Streamlit</span></div>
+  </div>`,
+  so:'Claude Code wrote the code from my prompts, and tests lock in the safety order, so a later change can\'t quietly push a brake message down.'}),
+
+frame({eyebrow:'What we built',pg:'05',
+  headline:'One page for the morning: safety on top, a call list, and a warning when bays run out.',
+  ex:'Exhibit 4 | The Morning fault queue page (Streamlit)',
+  body:`<img class="shot" src="{{IMG_TOP}}" alt="Morning fault queue page">`,
+  so:'Advisors start at the top and work down. The call list shows who still needs a phone call, and the warning tells the manager there aren\'t enough bays before anyone has to ask.'}),
+
+frame({eyebrow:'Results',pg:'06',
+  headline:`Every hand-checked safety fault is caught, and all ${D.n_safety} safety messages sit above everything else.`,
+  ex:'Exhibit 5 | Results on the overnight batch and the acceptance test',
+  body:`<div class="kpis">
+   <div class="kpi"><div class="n red">${D.rules_caught} of ${D.hand}</div><div class="l">Hand-checked safety faults tagged safety urgent</div></div>
+   <div class="kpi"><div class="n">${D.model_caught} of ${D.hand}</div><div class="l">Caught by the AI model before the rules backstop</div></div>
+   <div class="kpi"><div class="n">${D.acc_match} of ${D.acc_n}</div><div class="l">Acceptance test messages with the right safety call</div></div>
+   <div class="kpi"><div class="n grn">#1 to #${D.page_last_safety_rank}</div><div class="l">Queue positions of the ${D.n_safety} safety messages</div></div>
+   <div class="kpi"><div class="n grn">${D.booked} of ${D.n}</div><div class="l">Messages booked into a slot this week</div></div>
+   <div class="kpi"><div class="n">${D.checks_passed} of ${D.checks}</div><div class="l">Schedule checks passed, incl. safety always in a bay</div></div>
+  </div>`,
+  so:`The hand-checked set has only confirmed safety faults, so this shows recall, not precision. Some of the ${D.n_safety} may be over-flagged, and that is the safe way to be wrong: an extra call costs minutes.`}),
+
+frame({eyebrow:'Key insight',pg:'07',
+  headline:'The tag comes from the fault, not the tone: a calm brake note goes first, angry wiper and screen complaints wait.',
+  ex:'Exhibit 6 | Three acceptance test messages, each pasted into the page',
+  body:`<div style="display:flex;gap:1.2em;width:100%;align-items:center;">
+   <div style="flex:1.15"><img class="shot" src="{{IMG_10309}}" alt="MSG-10309 on the page"></div>
+   <div style="flex:1"><table class="cmp"><tr><th>Message</th><th>How it sounds</th><th>Result</th></tr>
+    <tr class="hi"><td><b>${c.id}</b><br>Tahoe trip thank-you</td><td>"No rush at all", no alert, but the pedal "goes further down" and grinds</td><td>${pill(c.tag)}<br>#${c.rank} of 301, ${c.path}, ${c.slot}</td></tr>
+    <tr><td><b>${w.id}</b><br>Wipers</td><td>"I am going to lose my mind"</td><td>${pill(w.tag)}<br>#${w.rank} of 301, ${w.path}, ${w.slot}</td></tr>
+    <tr><td><b>${s.id}</b><br>Touchscreen</td><td>"I am honestly furious", car drives normally</td><td>${pill(s.tag)}<br>#${s.rank} of 301, ${s.path}</td></tr></table></div></div>`,
+  so:`${c.id} would have waited behind louder messages. Now it lands ahead of every soon and routine message, with a tow and a service bay.`}),
+
+frame({eyebrow:'The constraint',pg:'08',
+  headline:`Monday has ${D.by_day[Object.keys(D.by_day)[0]].safety_urgent} bays for ${D.n_safety} safety cars, so ${D.late} of them wait more than a day.`,
+  ex:'Exhibit 7 | Bookings by day and tag, week of 16 November',
+  body:chartDays(),
+  so:'Every safety driver gets a call on Monday and is told not to drive, but a car parked until Wednesday is a driver without a car. The worst cases go first, and no lower tag ever takes a bay while a safety car waits.'}),
+
+frame({eyebrow:'Next steps',pg:'09',
+  headline:'Four next steps, starting with bay capacity.',
+  body:`<div class="next">
+   <div class="nx"><i>1</i><div><b>Add early-week bay capacity.</b> ${D.late} safety cars wait more than a day. Extra Monday or Tuesday bays, or a mobile technician checking brake complaints first, cut that wait directly.</div></div>
+   <div class="nx"><i>2</i><div><b>Measure precision.</b> Send the ${D.n_safety - D.hand} safety messages nobody hand-checked to a reviewer, so we know how many are over-flagged.</div></div>
+   <div class="nx"><i>3</i><div><b>Fix one prompt line.</b> The model once read "no alert code" as an unknown code. One sentence fixes it, then rerun.</div></div>
+   <div class="nx"><i>4</i><div><b>Let advisors move a car between tiers</b> after the Monday call, since a two-minute conversation beats a keyword score.</div></div>
+  </div>`,
+  so:'Brake warnings no longer wait in line. The page shows the service team why: the problem in the car decides the order, and the tests keep it that way.'}),
+];
+
+const print=location.search.includes('print');
+const shell=document.getElementById('shell');
+if(print){ document.body.classList.add('print'); shell.innerHTML=slides.map(h=>`<div class="slide">${h}</div>`).join(''); }
+else{
+  const slide=document.getElementById('slide'),dots=document.getElementById('dots'),prev=document.getElementById('prev'),next=document.getElementById('next'); let i=0;
+  function render(){ slide.innerHTML=slides[i]; dots.innerHTML=slides.map((_,k)=>`<i class="${k===i?'on':''}" data-k="${k}"></i>`).join('');
+    dots.querySelectorAll('i').forEach(d=>d.onclick=()=>{i=+d.dataset.k;render();}); prev.disabled=i===0; next.disabled=i===slides.length-1; }
+  prev.onclick=()=>{if(i>0){i--;render();}}; next.onclick=()=>{if(i<slides.length-1){i++;render();}};
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')next.onclick(); if(e.key==='ArrowLeft')prev.onclick();});
+  render();
+}
+</script>
+</body>
+</html>

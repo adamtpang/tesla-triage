@@ -2,7 +2,7 @@
 
 A Tesla service center answers overnight fault messages in the order they arrive, so a brake warning can sit behind a question about wipers. This repo builds a morning fault queue that puts unsafe cars first, books every message into a service slot, and shows it all on one page.
 
-Built in four stages for a 0.university work simulation, with Python, Pydantic, a free OpenRouter model, Streamlit and Claude Code.
+Built in five stages for a 0.university work simulation, with Python, Pydantic, a free OpenRouter model, Streamlit and Claude Code.
 
 ![The morning fault queue page](04-queue-page/screenshots/queue-top.png)
 
@@ -20,6 +20,7 @@ Built in four stages for a 0.university work simulation, with Python, Pydantic, 
 | [02 Classify messages](02-classify-messages/) | A free OpenRouter model tags all 300 messages from the stage 01 rules. Pydantic validates every answer, and the rules run as a backstop that can only raise a tag. |
 | [03 Book slots](03-book-slots/) | The model books each message through a `book_slot` tool that enforces the slot rules. Monday has 24 bays for 105 safety cars, so safety runs as a tiered queue. Includes a safety report against the hand-checked set. |
 | [04 Queue page](04-queue-page/) | A Streamlit page with the whole queue, safety urgent on top, a paste box that tags and places any new message, a warning when safety cars wait more than a day for a bay, and a call list for safety drivers. [Prompts](04-queue-page/PROMPT.md). |
+| [05 Slides](05-slides/) | A 10-slide deck for the service team, with every number computed from the repo: the problem, the tools, the page, the results and the ask. [Read the deck (PDF)](05-slides/deck.pdf). |
 
 ## Run it
 
