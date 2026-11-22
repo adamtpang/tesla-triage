@@ -65,6 +65,13 @@
   .nx{display:flex;gap:.7em;align-items:flex-start;font-size:.86em;line-height:1.45;color:#25313c;}
   .nx i{flex:none;font-style:normal;font-weight:800;color:var(--safety);font-size:1.3em;line-height:1;}
   .nx b{color:var(--ink);}
+  .two{display:flex;gap:1.6em;width:100%;align-items:stretch;}
+  .two>div{flex:1;}
+  .flow{display:flex;flex-direction:column;gap:.45em;}
+  .fl{background:var(--band);border-radius:7px;padding:.5em .8em;font-size:.8em;line-height:1.4;color:#25313c;}
+  .fl b{color:var(--ink);} .fl.red{background:#fdeeee;}
+  .mini{display:flex;gap:.6em;margin-top:.5em;} .mini>div{flex:1;background:var(--band);border-radius:7px;padding:.5em .7em;}
+  .mini .n{font-size:1.25em;} .mini .l{font-size:.62em;}
   .nav{display:flex;align-items:center;justify-content:center;gap:1em;margin-top:14px;}
   .nav button{width:40px;height:40px;border-radius:50%;border:1px solid #3a3f47;background:#16181c;color:#fff;font-size:18px;cursor:pointer;}
   .nav button:disabled{opacity:.3;cursor:default;}
@@ -84,11 +91,12 @@ const COL={safety_urgent:'#d0302f',soon:'#e0912b',routine:'#3f8f63'};
 const LABEL={safety_urgent:'safety urgent',soon:'soon',routine:'routine'};
 const SRC=`Source: ${D.n} overnight fault messages, 15 to 16 November 2026 (simulation data); ${D.hand} hand-checked safety faults; repo results for stages 01 to 04.`;
 
-function frame(o){return `<div class="pad">
+let PG=0,EX=0;
+function frame(o){ PG++; if(o.ex) EX++; return `<div class="pad">
   <div class="eyebrow">${o.eyebrow}</div><div class="headline">${o.headline}</div><div class="rule"></div>
-  ${o.ex?`<div class="exlabel">${o.ex}</div>`:''}<div class="canvas">${o.body}</div>
+  ${o.ex?`<div class="exlabel">Exhibit ${EX} | ${o.ex}</div>`:''}<div class="canvas">${o.body}</div>
   ${o.so?`<div class="takeaway"><b>So what:</b> ${o.so}</div>`:''}
-  <div class="ftr"><span>${o.src||SRC}</span><span class="pg">${o.pg}</span></div></div>`;}
+  <div class="ftr"><span>${o.src||SRC}</span><span class="pg">${String(PG).padStart(2,'0')}</span></div></div>`;}
 
 /* Two strips of 300 ticks: arrival order vs queue page */
 function chartStrips(){
@@ -149,21 +157,21 @@ const slides=[
     <div><div class="n grn">#1 to #${D.page_last_safety_rank}</div><div class="l">Where safety messages now sit</div></div>
   </div></div>`,
 
-frame({eyebrow:'The problem',pg:'01',
+frame({eyebrow:'The problem',
   headline:`In arrival order, the typical safety message sat #${D.fifo_median} of ${D.n}, behind ${D.others_ahead_avg} other messages.`,
   ex:`Exhibit 1 | Position of each of the ${D.n} messages, arrival order vs the queue page`,
   body:chartStrips(),
   so:`${D.behind_wiper} of ${D.n_safety} safety messages had at least one wiper message ahead of them, and the last one sat at #${D.fifo_worst}. On the page, all ${D.n_safety} come before any soon or routine message.`}),
 
-frame({eyebrow:'Why it is hard',pg:'02',
+frame({eyebrow:'Why it is hard',
   headline:`${D.none_code} of ${D.hand} confirmed safety faults had no dashboard alert, so alert codes alone catch only ${D.alert_only}.`,
   ex:`Exhibit 2 | Hand-checked safety faults tagged safety urgent, by approach`,
   body:chartCatch(),
   so:`Drivers describe brake problems in their own words, often politely ("no rush", "happy to wait"). The rules read the words: any brake, pedal or steering symptom is safety urgent, and tone never lowers the tag.`}),
 
-frame({eyebrow:'Tools and approach',pg:'03',
+frame({eyebrow:'Tools and approach',
   headline:'Four stages, each built on the one before, so there is one set of rules to trust.',
-  ex:'Exhibit 3 | What each stage does and the tool behind it',
+  ex:'What each stage does and the tool behind it',
   body:`<div class="pipe">
    <div class="step"><span class="k">Stage 01</span><span class="t">Urgency rules</span><span class="d">Three tags, four fix paths, which alerts are safety faults, and a hidden rule for symptoms with no alert.</span><span class="big">${D.rules_caught} of ${D.hand}</span><span class="tool">Python + Pydantic</span></div><span class="arrow">&rsaquo;</span>
    <div class="step"><span class="k">Stage 02</span><span class="t">Classify</span><span class="d">A free AI model tags all ${D.n} messages. Every answer is validated, and the rules can only raise a tag.</span><span class="big">$0</span><span class="tool">OpenRouter free model</span></div><span class="arrow">&rsaquo;</span>
@@ -172,26 +180,43 @@ frame({eyebrow:'Tools and approach',pg:'03',
   </div>`,
   so:'Claude Code wrote the code from my prompts, and tests lock in the safety order, so a later change can\'t quietly push a brake message down.'}),
 
-frame({eyebrow:'What we built',pg:'04',
+frame({eyebrow:'Urgency rules and tagging',
+  headline:`Three tags and four fix paths, and every message is tagged twice: once by the model, once by the rules.`,
+  ex:'The urgency rules (left) and how each of the 300 messages got its tag (right)',
+  body:`<div class="two"><div><table class="cmp"><tr><th>Tag</th><th>Fix path</th><th>Respond</th><th>Messages</th></tr>
+    <tr class="hi"><td>${pill('safety_urgent')}</td><td><b>Tow to service center.</b> Call first, tell them not to drive</td><td>1 hour</td><td><b>${D.paths.tow_to_service_center}</b></td></tr>
+    <tr><td>${pill('soon')}</td><td><b>Mobile service.</b> Safe with a workaround</td><td>24 hours</td><td><b>${D.paths.mobile_service}</b></td></tr>
+    <tr><td>${pill('routine')}</td><td><b>Service center visit.</b> Physical, not a safety issue</td><td>72 hours</td><td><b>${D.paths.service_center_visit}</b></td></tr>
+    <tr><td>${pill('routine')}</td><td><b>Remote fix.</b> Software, fixed over the air</td><td>72 hours</td><td><b>${D.paths.remote_fix}</b></td></tr></table>
+    <div class="fl" style="margin-top:.6em"><b>Safety alerts:</b> BRK, ABS, ESP and EPAS codes. <b>Hidden rule:</b> any brake, pedal or steering symptom with no alert is safety urgent. Tone never lowers a tag, and the highest tag wins.</div></div>
+   <div class="flow">
+    <div class="fl"><b>1. The model tags.</b> A free OpenRouter model reads batches of 10 messages, with a prompt built from the rules.</div>
+    <div class="fl"><b>2. Pydantic checks every answer.</b> A valid tag, a valid fix path, and the fix path has to belong to the tag. Bad answers are retried.</div>
+    <div class="fl red"><b>3. The rules run as a backstop.</b> They tag every message too, and can only raise a tag, never lower it.</div>
+    <div class="mini"><div><div class="n">${D.agree} of ${D.n}</div><div class="l">model and rules agree</div></div><div><div class="n">${D.more_cautious}</div><div class="l">disagreements, all the model being more careful</div></div><div><div class="n">$0</div><div class="l">model cost, free models only</div></div></div>
+   </div></div>`,
+  so:`The rules are the single source of truth: the prompt, the backstop and the page all read them. The model caught ${D.model_caught} of ${D.hand} hand-checked faults by itself, and the backstop is there for the run where it doesn't.`}),
+
+frame({eyebrow:'What we built',
   headline:'One page for the morning: safety on top, a call list, and a warning when bays run out.',
-  ex:'Exhibit 4 | The Morning fault queue page (Streamlit)',
+  ex:'The Morning fault queue page (Streamlit)',
   body:`<img class="shot" src="{{IMG_TOP}}" alt="Morning fault queue page">`,
   so:'Advisors start at the top and work down. The call list shows who still needs a phone call, and the warning tells the manager there aren\'t enough bays before anyone has to ask.'}),
 
-frame({eyebrow:'Live demo',pg:'05',
+frame({eyebrow:'Live demo',
   headline:'Two minutes on the real page: a calm brake note jumps the line, an angry wiper message does not.',
-  ex:'Exhibit 5 | Demo script, run on the live Streamlit page',
+  ex:'Demo script, run on the live Streamlit page',
   body:`<table class="cmp" style="font-size:.86em"><tr><th style="width:4%">#</th><th style="width:30%">Do this</th><th>What the team should see</th><th style="width:9%">Time</th></tr>
    <tr><td><b>1</b></td><td>Open the page</td><td>All ${D.n_safety} safety messages at the top, and the warning: ${D.late} safety cars wait more than a day for a bay</td><td>20 s</td></tr>
    <tr class="hi"><td><b>2</b></td><td>Paste ${c.id}, the Tahoe thank-you note</td><td>${pill(c.tag)} with no alert code and a calm tone. The page quotes "pedal goes further" and the grinding, then books a tow: #${c.rank} of 301, ${c.slot}</td><td>40 s</td></tr>
    <tr><td><b>3</b></td><td>Paste ${w.id}, the angry wiper message</td><td>${pill(w.tag)}, #${w.rank} of 301. Loud, but it lands behind every safety car</td><td>30 s</td></tr>
    <tr><td><b>4</b></td><td>Tick one driver on the call list</td><td>"Still to call" drops by one, and the whole team sees it</td><td>15 s</td></tr>
    <tr><td><b>5</b></td><td>Scroll to the acceptance test</td><td>${D.acc_match} of ${D.acc_n} test messages get the right safety call</td><td>15 s</td></tr></table>`,
-  so:'If the live page fails, slides 04 and 07 show the same screens. The demo proves the point the numbers make: the problem in the car decides the order.'}),
+  so:'If the live page fails, the page and key insight slides show the same screens. The demo proves the point the numbers make: the problem in the car decides the order.'}),
 
-frame({eyebrow:'Results',pg:'06',
+frame({eyebrow:'Results',
   headline:`Every hand-checked safety fault is caught, and all ${D.n_safety} safety messages sit above everything else.`,
-  ex:'Exhibit 6 | Results on the overnight batch and the acceptance test',
+  ex:'Results on the overnight batch and the acceptance test',
   body:`<div class="kpis">
    <div class="kpi"><div class="n red">${D.rules_caught} of ${D.hand}</div><div class="l">Hand-checked safety faults tagged safety urgent</div></div>
    <div class="kpi"><div class="n">${D.model_caught} of ${D.hand}</div><div class="l">Caught by the AI model before the rules backstop</div></div>
@@ -202,9 +227,9 @@ frame({eyebrow:'Results',pg:'06',
   </div>`,
   so:`The hand-checked set has only confirmed safety faults, so this shows recall, not precision. Some of the ${D.n_safety} may be over-flagged, and that is the safe way to be wrong: an extra call costs minutes.`}),
 
-frame({eyebrow:'Key insight',pg:'07',
+frame({eyebrow:'Key insight',
   headline:'The tag comes from the fault, not the tone: a calm brake note goes first, angry wiper and screen complaints wait.',
-  ex:'Exhibit 7 | Three acceptance test messages, each pasted into the page',
+  ex:'Three acceptance test messages, each pasted into the page',
   body:`<div style="display:flex;gap:1.2em;width:100%;align-items:center;">
    <div style="flex:1.15"><img class="shot" src="{{IMG_10309}}" alt="MSG-10309 on the page"></div>
    <div style="flex:1"><table class="cmp"><tr><th>Message</th><th>How it sounds</th><th>Result</th></tr>
@@ -213,13 +238,30 @@ frame({eyebrow:'Key insight',pg:'07',
     <tr><td><b>${s.id}</b><br>Touchscreen</td><td>"I am honestly furious", car drives normally</td><td>${pill(s.tag)}<br>#${s.rank} of 301, ${s.path}</td></tr></table></div></div>`,
   so:`${c.id} would have waited behind louder messages. Now it lands ahead of every soon and routine message, with a tow and a service bay.`}),
 
-frame({eyebrow:'The constraint',pg:'08',
+frame({eyebrow:'Service schedule and safety check',
+  headline:`Every message is booked by rule, and all ${D.hand} hand-checked safety faults land in a bay by ${new Date(D.hand_last_day+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long'})}.`,
+  ex:'Booking rules (left) and the safety check against the hand-checked set (right)',
+  body:`<div class="two"><div class="flow">
+    <div class="fl"><b>The fix path picks the slot type.</b> Tow and visit get a bay, mobile service gets a van, remote fix gets the remote desk.</div>
+    <div class="fl red"><b>Safety first.</b> A safety car takes the earliest open bay. The worst ${D.by_day[Object.keys(D.by_day)[0]].safety_urgent} get Monday, and no lower tag gets a bay while a safety car waits.</div>
+    <div class="fl"><b>The model books, the tool enforces.</b> The model calls <i>book_slot</i>, which rejects any slot that breaks a rule and says why. ${D.booked_model} booked by the model, ${D.booked_fallback} routine ones by code after 4 tries.</div>
+    <div class="fl"><b>Overflow only when full.</b> ${D.callbacks} remote fixes moved to a phone callback. Safety tows never overflow.</div>
+   </div><div><table class="cmp"><tr><th>Check</th><th>Result</th></tr>
+    <tr><td>Messages booked this week / schedule checks passed</td><td><b>${D.booked} of ${D.n}</b> / <b>${D.checks_passed} of ${D.checks}</b></td></tr>
+    <tr class="hi"><td><b>Hand-checked safety faults tagged safety urgent</b></td><td><b>${D.rules_caught} of ${D.hand}</b>, no misses</td></tr>
+    <tr><td>With no dashboard alert</td><td>${D.none_caught} of ${D.none_code}</td></tr>
+    <tr><td>Written in a calm, polite tone</td><td>${D.calm_caught} of ${D.calm_n}</td></tr>
+    <tr><td>Booked in a service bay</td><td>${D.hand_in_bay} of ${D.hand}</td></tr>
+    <tr><td>Safety messages nobody hand-checked</td><td>${D.unchecked}, sent to the reviewer next</td></tr></table></div></div>`,
+  so:`The check measures recall only, because the hand-checked set has no confirmed safe messages. It proves no known brake fault is missed or left without a bay. It can't prove the other safety tags are all real, which is why the next batch goes to a reviewer.`}),
+
+frame({eyebrow:'The constraint',
   headline:`Monday has ${D.by_day[Object.keys(D.by_day)[0]].safety_urgent} bays for ${D.n_safety} safety cars, so ${D.late} of them wait more than a day.`,
-  ex:'Exhibit 8 | Bookings by day and tag, week of 16 November',
+  ex:'Bookings by day and tag, week of 16 November',
   body:chartDays(),
   so:'Every safety driver gets a call on Monday and is told not to drive, but a car parked until Wednesday is a driver without a car. The worst cases go first, and no lower tag ever takes a bay while a safety car waits.'}),
 
-frame({eyebrow:'Next steps',pg:'09',
+frame({eyebrow:'Next steps',
   headline:'Four next steps, starting with bay capacity.',
   body:`<div class="next">
    <div class="nx"><i>1</i><div><b>Add early-week bay capacity.</b> ${D.late} safety cars wait more than a day. Extra Monday or Tuesday bays, or a mobile technician checking brake complaints first, cut that wait directly.</div></div>

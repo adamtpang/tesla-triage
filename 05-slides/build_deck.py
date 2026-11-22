@@ -9,6 +9,7 @@ then written into deck.html (a self-contained deck, arrow keys to move) and deck
 from __future__ import annotations
 
 import base64
+import csv
 import json
 import statistics
 import sys
@@ -20,6 +21,7 @@ sys.path.insert(0, str(ROOT / "04-queue-page"))
 
 from queue_core import (ACCEPTANCE_CSV, late_safety, load, load_everything, place,  # noqa: E402
                         row_from_rules)
+from safety_check import CALM  # noqa: E402  (stage 03, on the path via queue_core)
 
 SAFETY_CODES = ("BRK", "ABS", "ESP", "EPAS")
 
@@ -47,6 +49,14 @@ def numbers() -> dict:
 
     summary02 = json.loads((ROOT / "02-classify-messages/results/summary.json").read_text(encoding="utf-8"))
     summary03 = json.loads((ROOT / "03-book-slots/results/summary.json").read_text(encoding="utf-8"))
+
+    # Stage 03: the model-booked schedule and the safety check against the 60.
+    with (ROOT / "03-book-slots/results/schedule.csv").open(encoding="utf-8") as f:
+        sched = {r["message_id"]: r for r in csv.DictReader(f)}
+    hand_ids = [r.msg.message_id for r in hand]
+    hand_days = sorted(sched[m]["slot_date"] for m in hand_ids)
+    calm = [r for r in hand if CALM.search(f"{r.msg.message_subject}. {r.msg.message_text}")]
+    none_rows = [r for r in hand if r.msg.vehicle_alert_code.upper() == "NONE"]
 
     accept, _ = load(ACCEPTANCE_CSV)
     acc = {m.message_id: place(row_from_rules(m), rows, slots, base) for m in accept}
@@ -77,6 +87,17 @@ def numbers() -> dict:
         "by_day": summary03["bookings_by_day"],
         "checks_passed": sum(summary03["checks"].values()), "checks": len(summary03["checks"]),
         "late": len(late_safety(rows, base)),
+        "paths": summary02["fix_paths"], "agree": summary02["model_and_rules_agree"],
+        "raised": summary02["raised_by_backstop"], "more_cautious": summary02["model_more_cautious_than_rules"],
+        "booked_model": summary03["booked_by"].get("model", 0),
+        "booked_fallback": summary03["booked_by"].get("fallback", 0),
+        "callbacks": summary03["remote_fix_overflow_to_callback"],
+        "hand_monday": summary03["hand_checked_in_monday_tier"],
+        "hand_last_day": hand_days[-1],
+        "hand_in_bay": sum(sched[m]["slot_type"] == "service_center_bay" for m in hand_ids),
+        "none_caught": sum(tag[r.msg.message_id] == "safety_urgent" for r in none_rows),
+        "calm_n": len(calm), "calm_caught": sum(tag[r.msg.message_id] == "safety_urgent" for r in calm),
+        "unchecked": len(safety) - len(hand),
         "acc_n": len(accept), "acc_match": acc_match,
         "c10309": card("MSG-10309"), "c10301": card("MSG-10301"), "c10305": card("MSG-10305"),
     }
