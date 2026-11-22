@@ -149,34 +149,19 @@ const slides=[
     <div><div class="n grn">#1 to #${D.page_last_safety_rank}</div><div class="l">Where safety messages now sit</div></div>
   </div></div>`,
 
-`<div class="pad"><div class="eyebrow">Summary</div>
-  <div class="headline">Every safety message now sits at the top of the morning queue, and every car has a slot this week.</div><div class="rule"></div>
-  <div class="cols"><div class="points">
-    <div class="pt"><i>1</i><div><b>The problem:</b> messages were answered in arrival order. The typical safety message sat #${D.fifo_median} of ${D.n}, behind ${D.others_ahead_avg} other messages on average, and ${D.behind_wiper} of ${D.n_safety} had a wiper message ahead of them.</div></div>
-    <div class="pt"><i>2</i><div><b>The hard part:</b> ${D.none_code} of the ${D.hand} confirmed safety faults had no dashboard alert at all. Sorting on alert codes would catch only ${D.alert_only}.</div></div>
-    <div class="pt"><i>3</i><div><b>What we built:</b> urgency rules, a free AI model that tags every message, a booking tool that enforces the slot rules, and one page that shows it all with safety first.</div></div>
-    <div class="ask"><b>The ask:</b> more bay capacity early in the week. ${D.late} of ${D.n_safety} safety cars still wait more than a day for a bay.</div>
-  </div><div class="rail">
-    <div><div class="n red">Top ${D.n_safety}</div><div class="l">Where safety messages now sit, up from a typical #${D.fifo_median}</div></div><hr>
-    <div><div class="n">${D.rules_caught} of ${D.hand}</div><div class="l">Hand-checked safety faults caught</div></div><hr>
-    <div><div class="n">${D.acc_match} of ${D.acc_n}</div><div class="l">Acceptance test messages right</div></div><hr>
-    <div><div class="n grn">${D.booked} of ${D.n}</div><div class="l">Booked this week</div></div>
-  </div></div>
-  <div class="ftr"><span>${SRC}</span><span class="pg">01</span></div></div>`,
-
-frame({eyebrow:'The problem',pg:'02',
+frame({eyebrow:'The problem',pg:'01',
   headline:`In arrival order, the typical safety message sat #${D.fifo_median} of ${D.n}, behind ${D.others_ahead_avg} other messages.`,
   ex:`Exhibit 1 | Position of each of the ${D.n} messages, arrival order vs the queue page`,
   body:chartStrips(),
   so:`${D.behind_wiper} of ${D.n_safety} safety messages had at least one wiper message ahead of them, and the last one sat at #${D.fifo_worst}. On the page, all ${D.n_safety} come before any soon or routine message.`}),
 
-frame({eyebrow:'Why it is hard',pg:'03',
+frame({eyebrow:'Why it is hard',pg:'02',
   headline:`${D.none_code} of ${D.hand} confirmed safety faults had no dashboard alert, so alert codes alone catch only ${D.alert_only}.`,
   ex:`Exhibit 2 | Hand-checked safety faults tagged safety urgent, by approach`,
   body:chartCatch(),
   so:`Drivers describe brake problems in their own words, often politely ("no rush", "happy to wait"). The rules read the words: any brake, pedal or steering symptom is safety urgent, and tone never lowers the tag.`}),
 
-frame({eyebrow:'Tools and approach',pg:'04',
+frame({eyebrow:'Tools and approach',pg:'03',
   headline:'Four stages, each built on the one before, so there is one set of rules to trust.',
   ex:'Exhibit 3 | What each stage does and the tool behind it',
   body:`<div class="pipe">
@@ -187,15 +172,26 @@ frame({eyebrow:'Tools and approach',pg:'04',
   </div>`,
   so:'Claude Code wrote the code from my prompts, and tests lock in the safety order, so a later change can\'t quietly push a brake message down.'}),
 
-frame({eyebrow:'What we built',pg:'05',
+frame({eyebrow:'What we built',pg:'04',
   headline:'One page for the morning: safety on top, a call list, and a warning when bays run out.',
   ex:'Exhibit 4 | The Morning fault queue page (Streamlit)',
   body:`<img class="shot" src="{{IMG_TOP}}" alt="Morning fault queue page">`,
   so:'Advisors start at the top and work down. The call list shows who still needs a phone call, and the warning tells the manager there aren\'t enough bays before anyone has to ask.'}),
 
+frame({eyebrow:'Live demo',pg:'05',
+  headline:'Two minutes on the real page: a calm brake note jumps the line, an angry wiper message does not.',
+  ex:'Exhibit 5 | Demo script, run on the live Streamlit page',
+  body:`<table class="cmp" style="font-size:.86em"><tr><th style="width:4%">#</th><th style="width:30%">Do this</th><th>What the team should see</th><th style="width:9%">Time</th></tr>
+   <tr><td><b>1</b></td><td>Open the page</td><td>All ${D.n_safety} safety messages at the top, and the warning: ${D.late} safety cars wait more than a day for a bay</td><td>20 s</td></tr>
+   <tr class="hi"><td><b>2</b></td><td>Paste ${c.id}, the Tahoe thank-you note</td><td>${pill(c.tag)} with no alert code and a calm tone. The page quotes "pedal goes further" and the grinding, then books a tow: #${c.rank} of 301, ${c.slot}</td><td>40 s</td></tr>
+   <tr><td><b>3</b></td><td>Paste ${w.id}, the angry wiper message</td><td>${pill(w.tag)}, #${w.rank} of 301. Loud, but it lands behind every safety car</td><td>30 s</td></tr>
+   <tr><td><b>4</b></td><td>Tick one driver on the call list</td><td>"Still to call" drops by one, and the whole team sees it</td><td>15 s</td></tr>
+   <tr><td><b>5</b></td><td>Scroll to the acceptance test</td><td>${D.acc_match} of ${D.acc_n} test messages get the right safety call</td><td>15 s</td></tr></table>`,
+  so:'If the live page fails, slides 04 and 07 show the same screens. The demo proves the point the numbers make: the problem in the car decides the order.'}),
+
 frame({eyebrow:'Results',pg:'06',
   headline:`Every hand-checked safety fault is caught, and all ${D.n_safety} safety messages sit above everything else.`,
-  ex:'Exhibit 5 | Results on the overnight batch and the acceptance test',
+  ex:'Exhibit 6 | Results on the overnight batch and the acceptance test',
   body:`<div class="kpis">
    <div class="kpi"><div class="n red">${D.rules_caught} of ${D.hand}</div><div class="l">Hand-checked safety faults tagged safety urgent</div></div>
    <div class="kpi"><div class="n">${D.model_caught} of ${D.hand}</div><div class="l">Caught by the AI model before the rules backstop</div></div>
@@ -208,7 +204,7 @@ frame({eyebrow:'Results',pg:'06',
 
 frame({eyebrow:'Key insight',pg:'07',
   headline:'The tag comes from the fault, not the tone: a calm brake note goes first, angry wiper and screen complaints wait.',
-  ex:'Exhibit 6 | Three acceptance test messages, each pasted into the page',
+  ex:'Exhibit 7 | Three acceptance test messages, each pasted into the page',
   body:`<div style="display:flex;gap:1.2em;width:100%;align-items:center;">
    <div style="flex:1.15"><img class="shot" src="{{IMG_10309}}" alt="MSG-10309 on the page"></div>
    <div style="flex:1"><table class="cmp"><tr><th>Message</th><th>How it sounds</th><th>Result</th></tr>
@@ -219,7 +215,7 @@ frame({eyebrow:'Key insight',pg:'07',
 
 frame({eyebrow:'The constraint',pg:'08',
   headline:`Monday has ${D.by_day[Object.keys(D.by_day)[0]].safety_urgent} bays for ${D.n_safety} safety cars, so ${D.late} of them wait more than a day.`,
-  ex:'Exhibit 7 | Bookings by day and tag, week of 16 November',
+  ex:'Exhibit 8 | Bookings by day and tag, week of 16 November',
   body:chartDays(),
   so:'Every safety driver gets a call on Monday and is told not to drive, but a car parked until Wednesday is a driver without a car. The worst cases go first, and no lower tag ever takes a bay while a safety car waits.'}),
 
