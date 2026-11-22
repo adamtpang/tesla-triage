@@ -25,12 +25,14 @@ All 320 slots are open and none are double-booked, so 300 messages fit this week
 
 1. **Every safety urgent driver is handled the same day.** They get a call on Monday, are told not to drive, and get a tow timed to their slot.
 2. **Tier 1 gets the 24 Monday bays.** These are the most severe cases: cars already off the road first, then the worst symptoms (pedal to the floor, brake fluid, a sinking pedal, locking wheels, heavy steering), then hand-checked faults, then oldest first.
-3. **Tier 2, the other 81, take the earliest bays after that**, ahead of every soon and routine booking. A safety message must take the earliest open bay.
+3. **Tier 2, the other 81, take the earliest bays after that**, ahead of every soon and routine booking. A safety message must take the earliest open bay, and the tool rejects any soon or routine message that asks for a bay while a safety message is still unbooked.
 4. **Soon, then routine**, go on the earliest day that still has a slot of their type.
 5. **The fix path decides the slot type:** tow and service center visit use a bay, mobile service uses a mobile van, and remote fix uses the remote desk.
 6. **Overflow is allowed only once the primary type is full.** Remote fix overflows to a support callback, where a technician walks the driver through the fix by phone. Safety tows never overflow: it's a bay or nothing.
 
 The rules are Pydantic models (`SlotRules`, `Slot`, `BookSlotArgs`) and fail on load if, for example, a fix path has no slot type, or a safety tow is allowed anywhere except a bay.
+
+The bay hold for safety used to depend only on queue order: safety messages are sent to the model first, so no lower tag ever reached a bay early. It is now a hard rule in `book_slot` too, so a change to batching can't quietly break it. `python -m pytest test_book.py` covers it, including a check that the real schedule never gives a soon or routine message a bay before the last safety bay.
 
 ## How the model books
 

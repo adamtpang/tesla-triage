@@ -2,8 +2,9 @@
 
 A free OpenRouter model books each message by calling a `book_slot` tool.
 The tool enforces the slot rules, so the model can choose but cannot break
-them: a booking with the wrong slot type, a taken slot, or a safety message
-skipping past an earlier open bay is rejected and the model has to retry.
+them: a booking with the wrong slot type, a taken slot, a safety message
+skipping past an earlier open bay, or a soon or routine message taking a bay
+while a safety message is still unbooked is rejected and the model retries.
 
 The slot rules (the tiered safety queue):
 - 105 messages are safety urgent, but Monday 16 November has only 24 bays.
@@ -150,6 +151,11 @@ class Scheduler:
         return sorted((s for s in self.open.values() if s.slot_type in types),
                       key=lambda s: (s.start, s.slot_id))
 
+    def safety_waiting(self) -> int:
+        """Safety messages that still have no bay."""
+        return sum(1 for i in self.items.values()
+                   if i.tag is Tag.SAFETY_URGENT and i.message_id not in self.booked)
+
     def check(self, item: Item, slot: Slot) -> str | None:
         eligible = self.eligible(item)
         if not eligible:
@@ -157,6 +163,10 @@ class Scheduler:
         if slot.slot_type not in self.allowed_types(item):
             return (f"{item.fix_path.value} must use {self.allowed_types(item)[0]} now, "
                     f"not {slot.slot_type}")
+        if (slot.slot_type == "service_center_bay" and item.tag is not Tag.SAFETY_URGENT
+                and self.safety_waiting()):
+            return (f"bays are held for safety: {self.safety_waiting()} safety "
+                    f"message(s) still need a bay")
         if item.tag is Tag.SAFETY_URGENT and slot.start > eligible[0].start:
             return (f"safety message must take the earliest open bay: "
                     f"{eligible[0].slot_date} {eligible[0].slot_start_time}")
@@ -221,7 +231,7 @@ Rules (the tool enforces them and tells you if a booking breaks one):
 1. Book in the order given. Earlier messages are more urgent.
 2. Fix path decides slot type: tow_to_service_center and service_center_visit -> service_center_bay; mobile_service -> mobile_service_visit; remote_fix -> remote_ota_or_diagnostic, or support_callback once the remote desk is full.
 3. A safety_urgent message must take the earliest open service_center_bay. Never let a safety message wait behind a later one.
-4. Other messages go on the earliest day that still has an open slot of their type.
+4. Other messages go on the earliest day that still has an open slot of their type. No soon or routine message may take a service_center_bay while any safety_urgent message is still unbooked.
 5. Never book a slot twice. If the tool returns an error, read it and book a different slot.
 
 Call book_slot for every message. Do not answer in prose."""
