@@ -82,6 +82,10 @@ def show_placement(p) -> None:
         tiebreak.append("car is off the road")
     if r.severe:
         tiebreak.append("severe wording")
+    behind = p.total - b.rank
+    if behind:
+        st.info(f"In arrival order this message would be answered last, #{p.total} of {p.total}. "
+                f"Here it jumps ahead of {behind} messages.")
     st.caption(f"Tiebreak inside its tag: {', '.join(tiebreak) or 'not off the road, no severe wording'}"
                f", received {r.msg.received_at.replace('T', ' ')}. "
                f"{p.pushed_later} existing bookings move later to make room.")

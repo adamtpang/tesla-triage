@@ -197,6 +197,19 @@ frame({eyebrow:'Urgency rules and tagging',
    </div></div>`,
   so:`The rules are the single source of truth: the prompt, the backstop and the page all read them. The model caught ${D.model_caught} of ${D.hand} hand-checked faults by itself, and the backstop is there for the run where it doesn't.`}),
 
+frame({eyebrow:'The safety alert list',
+  headline:'One test decides the safety list: can a fault in this system stop the car braking, steering or staying stable?',
+  ex:'Dashboard alert systems, the test, and the tag each one gets',
+  body:`<table class="cmp" style="font-size:.84em"><tr><th>System</th><th>Alert codes</th><th>Can it stop the car braking, steering or staying stable?</th><th>Tag</th></tr>
+   <tr class="hi"><td><b>Brakes</b></td><td>BRK_a001, BRK_w003</td><td>Yes: the car may not stop</td><td>${pill('safety_urgent')}</td></tr>
+   <tr class="hi"><td><b>Anti-lock brakes</b></td><td>ABS_w002</td><td>Yes: wheels can lock and the car can slide</td><td>${pill('safety_urgent')}</td></tr>
+   <tr class="hi"><td><b>Stability control</b></td><td>ESP_w003</td><td>Yes: the car can lose grip in a turn</td><td>${pill('safety_urgent')}</td></tr>
+   <tr class="hi"><td><b>Power steering</b></td><td>EPAS_w202, EPAS_a191</td><td>Yes: the wheel can go heavy mid-turn</td><td>${pill('safety_urgent')}</td></tr>
+   <tr><td><b>Wipers</b></td><td>WIP_w001</td><td>No, but it can block the view in rain</td><td>${pill('soon')}</td></tr>
+   <tr><td><b>Charge port</b></td><td>CP_a004</td><td>No, but the car may not charge</td><td>${pill('soon')}</td></tr>
+   <tr><td><b>Touchscreen, climate</b></td><td>UI_a004, HVAC_w003</td><td>No: the driving controls still work</td><td>${pill('routine')}</td></tr></table>`,
+  so:`The list is short on purpose, so "safety urgent" keeps its meaning. A code nobody has seen before is tagged soon and flagged, never quietly routine. And the list is only half the net: ${D.none_code} of the ${D.hand} real safety faults had no code at all, which is what the hidden rule is for.`}),
+
 frame({eyebrow:'What we built',
   headline:'One page for the morning: safety on top, a call list, and a warning when bays run out.',
   ex:'The Morning fault queue page (Streamlit)',
@@ -204,7 +217,7 @@ frame({eyebrow:'What we built',
   so:'Advisors start at the top and work down. The call list shows who still needs a phone call, and the warning tells the manager there aren\'t enough bays before anyone has to ask.'}),
 
 frame({eyebrow:'Live demo',
-  headline:'Two minutes on the real page: a calm brake note jumps the line, an angry wiper message does not.',
+  headline:'Two minutes on the live page: a calm note about a soft brake pedal jumps the line, an angry wiper message does not.',
   ex:'Demo script, run on the live Streamlit page',
   body:`<table class="cmp" style="font-size:.86em"><tr><th style="width:4%">#</th><th style="width:30%">Do this</th><th>What the team should see</th><th style="width:9%">Time</th></tr>
    <tr><td><b>1</b></td><td>Open the page</td><td>All ${D.n_safety} safety messages at the top, and the warning: ${D.late} safety cars wait more than a day for a bay</td><td>20 s</td></tr>
@@ -254,6 +267,23 @@ frame({eyebrow:'Service schedule and safety check',
     <tr><td>Booked in a service bay</td><td>${D.hand_in_bay} of ${D.hand}</td></tr>
     <tr><td>Safety messages nobody hand-checked</td><td>${D.unchecked}, sent to the reviewer next</td></tr></table></div></div>`,
   so:`The check measures recall only, because the hand-checked set has no confirmed safe messages. It proves no known brake fault is missed or left without a bay. It can't prove the other safety tags are all real, which is why the next batch goes to a reviewer.`}),
+
+frame({eyebrow:'Data quality and missed faults',
+  headline:`No known safety fault is missed, and every data problem found is flagged instead of hidden.`,
+  ex:'What the data looked like, and what the system does about each problem',
+  body:`<div class="two"><div><table class="cmp"><tr><th>Data quality finding</th><th>What happens</th></tr>
+    <tr><td><b>${D.n} of ${D.n}</b> rows pass validation</td><td>A bad row is reported, never tagged</td></tr>
+    <tr><td><b>${D.none_all} of ${D.n}</b> messages have no alert code</td><td>The words are read, not just the code</td></tr>
+    <tr><td><b>${D.cut_off}</b> messages are cut off mid-sentence</td><td>Tagged at least soon, with a call back. ${D.cut_off_safety} already show a safety fault</td></tr>
+    <tr><td><b>${D.vin_conflicts}</b> VIN endings appear on more than one car</td><td>Listed in the report so nobody books the wrong car</td></tr>
+    <tr class="hi"><td><b>All ${D.hand}</b> hand-checked rows are safety faults</td><td>Recall can be measured, false alarms can't yet</td></tr></table></div>
+   <div class="flow">
+    <div class="fl red"><b>Missed safety faults: 0 of ${D.hand}.</b> ${D.none_caught} of ${D.none_code} with no alert and ${D.calm_caught} of ${D.calm_n} written calmly are all caught.</div>
+    <div class="fl"><b>Three nets against a miss.</b> The hidden rule (any brake, pedal or steering symptom), the rules backstop behind the model, and tests that fail if a brake message slips down.</div>
+    <div class="fl"><b>Where a miss could still come from.</b> Wording nobody has seen, with no alert code, that the model also reads as harmless. That's why any brake or pedal mention counts, and why over-flagging is allowed.</div>
+    <div class="fl"><b>What's still unknown.</b> How many of the ${D.unchecked} unchecked safety tags are false alarms. They go to the reviewer next.</div>
+   </div></div>`,
+  so:'One missed brake fault could hurt someone, so the system is built to be wrong in the safe direction: it would rather call a driver who was fine than skip one who wasn’t.'}),
 
 frame({eyebrow:'The constraint',
   headline:`Monday has ${D.by_day[Object.keys(D.by_day)[0]].safety_urgent} bays for ${D.n_safety} safety cars, so ${D.late} of them wait more than a day.`,

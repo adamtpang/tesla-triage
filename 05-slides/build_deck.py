@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "04-queue-page"))
 from queue_core import (ACCEPTANCE_CSV, late_safety, load, load_everything, place,  # noqa: E402
                         row_from_rules)
 from safety_check import CALM  # noqa: E402  (stage 03, on the path via queue_core)
+from triage import looks_cut_off, vin_conflicts  # noqa: E402  (stage 01)
 
 SAFETY_CODES = ("BRK", "ABS", "ESP", "EPAS")
 
@@ -98,6 +99,10 @@ def numbers() -> dict:
         "none_caught": sum(tag[r.msg.message_id] == "safety_urgent" for r in none_rows),
         "calm_n": len(calm), "calm_caught": sum(tag[r.msg.message_id] == "safety_urgent" for r in calm),
         "unchecked": len(safety) - len(hand),
+        "cut_off": sum(looks_cut_off(r.msg.message_text) for r in rows),
+        "cut_off_safety": sum(looks_cut_off(r.msg.message_text) and r.tag.value == "safety_urgent" for r in rows),
+        "none_all": sum(r.msg.vehicle_alert_code.upper() == "NONE" for r in rows),
+        "vin_conflicts": len(vin_conflicts([r.msg for r in rows])),
         "acc_n": len(accept), "acc_match": acc_match,
         "c10309": card("MSG-10309"), "c10301": card("MSG-10301"), "c10305": card("MSG-10305"),
     }
